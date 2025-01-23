@@ -213,10 +213,10 @@ begin
     $display("==============================================================");
     $display("Test begin!");
 
-    #10000;
+    #20;
     while(`CONFREG_NUM_MONITOR)
     begin
-        #10000;
+        #10;
         $display ("        [%t] Test is running, debug_wb_pc = 0x%8h",$time, debug_wb_pc);
     end
 end
