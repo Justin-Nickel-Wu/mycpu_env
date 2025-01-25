@@ -2,12 +2,14 @@ module mycpu_top(
     input  wire        clk,
     input  wire        resetn,
     // inst sram interface
-    output wire        inst_sram_we,
+    output wire        inst_sram_en,
+    output wire [3:0]  inst_sram_we,
     output wire [31:0] inst_sram_addr,
     output wire [31:0] inst_sram_wdata,
     input  wire [31:0] inst_sram_rdata,
     // data sram interface
-    output wire        data_sram_we,
+    output wire        data_sram_en,
+    output wire [3:0]  data_sram_we, 
     output wire [31:0] data_sram_addr,
     output wire [31:0] data_sram_wdata,
     input  wire [31:0] data_sram_rdata,
@@ -125,7 +127,8 @@ always @(posedge clk) begin
     end
 end
 
-assign inst_sram_we    = 1'b0;
+assign inst_sram_en    = 1'b1;
+assign inst_sram_we    = {4{1'b0}};
 assign inst_sram_addr  = pc;
 assign inst_sram_wdata = 32'b0;
 assign inst            = inst_sram_rdata;
@@ -256,7 +259,8 @@ alu u_alu(
     .alu_result (alu_result)
     );
 
-assign data_sram_we    = mem_we && valid;
+assign data_sram_en    = 1'b1;
+assign data_sram_we    = {4{mem_we && valid}};
 assign data_sram_addr  = alu_result;
 assign data_sram_wdata = rkd_value;
 
