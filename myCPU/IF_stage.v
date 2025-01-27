@@ -1,4 +1,4 @@
-'include "constants.v"
+`include "constants.h"
 
 module IF_stage(
     input   wire                        clk,
@@ -16,7 +16,7 @@ module IF_stage(
     output  wire [to_ID_data_width-1:0] to_ID_data,
 
     input   wire [31:0]                 nextpc
-)
+);
 
 reg IF_valid;
 wire IF_ready_go;

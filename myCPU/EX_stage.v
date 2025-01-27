@@ -1,4 +1,4 @@
-'include "constants.v"
+`include "constants.h"
 
 module EX_stage(
     input   wire                          clk,
@@ -9,7 +9,7 @@ module EX_stage(
     output  wire [to_MEM_data_width-1:0]  to_MEM_data,
     output  wire                          EX_to_MEM_valid,
     output  wire                          EX_allow_in
-)
+);
 
 reg EX_valid;
 wire EX_ready_go;

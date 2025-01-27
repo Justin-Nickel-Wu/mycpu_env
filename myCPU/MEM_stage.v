@@ -1,4 +1,4 @@
-'include "constants.v"
+`include "constants.h"
 
 module MEM_stage(
     input   wire                          clk,
@@ -15,7 +15,7 @@ module MEM_stage(
     output  wire [to_WB_data_width-1:0]   to_WB_data,
     output  wire                          MEM_to_WB_valid,
     output  wire                          MEM_allow_in
-)
+);
 
 reg MEM_valid;
 wire MEM_ready_go;

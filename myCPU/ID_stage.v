@@ -1,4 +1,4 @@
-'include "constants.v"
+`include "constants.h"
 
 module ID_stage(
     input   wire                          clk,
@@ -12,7 +12,7 @@ module ID_stage(
     output  wire                          ID_to_EX_valid,
     output  wire                          ID_allow_in,
 
-)
+);
 
 reg ID_valid;
 wire ID_ready_go;
