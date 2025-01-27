@@ -13,6 +13,7 @@ module MEM_stage(
     input   wire                          WB_allow_in,
     input   wire [to_MEM_data_width-1:0]  to_MEM_data,
     output  wire [to_WB_data_width-1:0]   to_WB_data,
+    input   wire                          EX_to_MEM_valid,
     output  wire                          MEM_to_WB_valid,
     output  wire                          MEM_allow_in
 );

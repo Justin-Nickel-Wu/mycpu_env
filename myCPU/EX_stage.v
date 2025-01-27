@@ -47,7 +47,7 @@ assign {pc,
 assign to_MEM_data = {alu_result, //32
                       rkd_value, //32
                       mem_we, //1
-                      res_from_mem//1
+                      res_from_mem,//1
                       dest, //32
                       gr_we //1
                     };

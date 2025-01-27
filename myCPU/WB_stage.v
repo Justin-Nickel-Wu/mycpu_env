@@ -6,7 +6,7 @@ module WB_stage(
 
     input   wire [to_WB_data_width-1:0]   to_WB_data,
     input   wire                          MEM_to_WB_valid,
-    output  wire                          WB_allow_in,
+    output  wire                          WB_allow_in
 );
 
 reg WB_valid;

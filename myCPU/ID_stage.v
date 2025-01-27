@@ -4,14 +4,13 @@ module ID_stage(
     input   wire                          clk,
     input   wire                          reset,
 
-    input   wire                    
+    input   wire                          IF_to_ID_valid,             
     input   wire                          EX_allow_in,
     input   wire [to_ID_data_width-1:0]   to_ID_data,
     output  wire [to_EX_data_width-1:0]   to_EX_data,
     output  wire [31:0]                   nextpc,
     output  wire                          ID_to_EX_valid,
-    output  wire                          ID_allow_in,
-
+    output  wire                          ID_allow_in
 );
 
 reg ID_valid;

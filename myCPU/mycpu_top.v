@@ -65,6 +65,7 @@ IF_stage u_IF_stage(
 ID_stage u_ID_stage(
     .clk            (clk),
     .reset          (reset),
+    .IF_to_ID_valid (IF_to_ID_valid),
     .to_ID_data     (to_ID_data),
     .EX_allow_in    (EX_allow_in),
     .to_EX_data     (to_EX_data),
@@ -79,6 +80,7 @@ EX_stage u_EX_stage(
     .MEM_allow_in   (MEM_allow_in),
     .to_EX_data     (to_EX_data),
     .to_MEM_data    (to_MEM_data),
+    .ID_to_EX_valid (ID_to_EX_valid),
     .EX_to_MEM_valid(EX_to_MEM_valid),
     .EX_allow_in    (EX_allow_in)
 );
@@ -93,6 +95,7 @@ MEM_stage u_MEM_stage(
     .data_sram_rdata(data_sram_rdata),
     .WB_allow_in    (WB_allow_in),
     .to_MEM_data    (to_MEM_data),
+    .EX_to_MEM_valid(EX_to_MEM_valid),
     .MEM_to_WB_valid(MEM_to_WB_valid),
     .MEM_allow_in   (MEM_allow_in)
 );
