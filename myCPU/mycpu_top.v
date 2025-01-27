@@ -19,29 +19,10 @@ module mycpu_top(
     output wire [ 4:0] debug_wb_rf_wnum,
     output wire [31:0] debug_wb_rf_wdata
 );
-reg         reset;
-always @(posedge clk) reset <= ~resetn;
-
-reg         valid;
-always @(posedge clk) begin
-    if (reset) begin
-        valid <= 1'b0;
-    end
-    else begin
-        valid <= 1'b1;
-    end
-end
 
 
-assign alu_src1 = src1_is_pc  ? pc[31:0] : rj_value;
-assign alu_src2 = src2_is_imm ? imm : rkd_value;
 
-alu u_alu(
-    .alu_op     (alu_op    ),
-    .alu_src1   (alu_src1  ),
-    .alu_src2   (alu_src2  ),
-    .alu_result (alu_result)
-    );
+
 
 assign data_sram_en    = 1'b1;
 assign data_sram_we    = {4{mem_we && valid}};
@@ -218,10 +199,6 @@ wire        rf_we   ;
 wire [ 4:0] rf_waddr;
 wire [31:0] rf_wdata;
 
-wire [31:0] alu_src1   ;
-wire [31:0] alu_src2   ;
-wire [31:0] alu_result ;
-
 wire [31:0] mem_result;
 wire [31:0] final_result;
 
@@ -238,7 +215,16 @@ always @(posedge clk) begin
 end
 
 assign {pc, inst} = to_ID_data;
-assign to_EX_data = {}
+assign to_EX_data ={pc, //32
+                    rj_value, //32
+                    rkd_value, //32
+                    imm, //32
+                    alu_op, //12
+                    src1_is_pc, //1
+                    src2_is_imm, //1
+
+
+}
 
 assign seq_pc       = pc + 3'h4;
 assign nextpc       = br_taken ? br_target : seq_pc;
@@ -358,5 +344,54 @@ assign br_taken = (   inst_beq  &&  rj_eq_rd
                   ) && valid;
 assign br_target = (inst_beq || inst_bne || inst_bl || inst_b) ? (pc + br_offs) :
                                                    /*inst_jirl*/ (rj_value + jirl_offs);
+
+endmodule
+
+module EX_stage(
+    input   wire                          clk,
+    input   wire                          reset,
+
+    input   wire                          MEM_allow_in,
+    input   wire [to_EX_data_width-1:0]   to_EX_data,
+    output  wire [to_MEM_data_width-1:0]  to_MEM_data,
+    output  wire                          EX_to_MEM_valid,
+    output  wire                          EX_allow_in
+)
+
+reg EX_valid;
+wire EX_ready_go;
+
+wire [31:0] alu_src1   ;
+wire [31:0] alu_src2   ;
+wire [31:0] alu_result ;
+
+assign EX_ready_go = 1'b1;//无阻塞
+assign EX_allow_in = ~EX_valid | (EX_ready_go & MEM_allow_in);
+assign EX_to_MEM_valid = EX_valid & EX_ready_go;
+
+always @(posedge clk) begin
+    if (reset)
+        EX_valid <= 1'b0;
+    else if (EX_ready_go)
+        EX_valid <= ID_to_EX_valid;
+end
+
+assign {pc,
+        rj_value,
+        rkd_value,
+        imm,
+        alu_op,
+        src1_is_pc,
+        src2_is_imm} = to_EX_data;
+
+assign alu_src1 = src1_is_pc  ? pc[31:0] : rj_value;
+assign alu_src2 = src2_is_imm ? imm : rkd_value;
+
+alu u_alu(
+    .alu_op     (alu_op    ),
+    .alu_src1   (alu_src1  ),
+    .alu_src2   (alu_src2  ),
+    .alu_result (alu_result)
+);
 
 endmodule
