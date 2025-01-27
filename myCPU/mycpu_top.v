@@ -32,12 +32,122 @@ always @(posedge clk) begin
     end
 end
 
+
+assign alu_src1 = src1_is_pc  ? pc[31:0] : rj_value;
+assign alu_src2 = src2_is_imm ? imm : rkd_value;
+
+alu u_alu(
+    .alu_op     (alu_op    ),
+    .alu_src1   (alu_src1  ),
+    .alu_src2   (alu_src2  ),
+    .alu_result (alu_result)
+    );
+
+assign data_sram_en    = 1'b1;
+assign data_sram_we    = {4{mem_we && valid}};
+assign data_sram_addr  = alu_result;
+assign data_sram_wdata = rkd_value;
+
+assign mem_result   = data_sram_rdata;
+assign final_result = res_from_mem ? mem_result : alu_result;
+
+assign rf_we    = gr_we && valid;
+assign rf_waddr = dest;
+assign rf_wdata = final_result;
+
+// debug info generate
+assign debug_wb_pc       = pc;
+assign debug_wb_rf_we   = {4{rf_we}};
+assign debug_wb_rf_wnum  = dest;
+assign debug_wb_rf_wdata = final_result;
+
+endmodule
+
+
+
+
+parameter to_ID_data_width = 64;
+parameter to_EX_data_width = 
+
+module IF_stage(
+    input   wire                        clk,
+    input   wire                        reset,
+
+    output  wire                        inst_sram_en,
+    output  wire [3:0]                  inst_sram_we,
+    output  wire [31:0]                 inst_sram_addr,
+    output  wire [31:0]                 inst_sram_wdata,
+    input   wire [31:0]                 inst_sram_rdata,
+
+    input   wire                        to_IF_valid,
+    input   wire                        ID_allow_in,
+    output  wire                        IF_to_ID_valid,
+    output  wire [to_ID_data_width-1:0] to_ID_data,
+
+    input   wire [31:0]                 nextpc
+)
+
+reg IF_valid;
+wire IF_ready_go;
+wire IF_allow_in;
+
+reg  [31:0] pc;
+wire [31:0] inst;
+
+//控制阻塞信号
+assign IF_ready_go = 1'b1;//无阻塞
+assign IF_allow_in = ~IF_valid | (IF_ready_go & ID_allow_in);
+assign IF_to_ID_valid = IF_valid & IF_ready_go;
+
+always @(posedge clk) begin
+    if (reset)
+        IF_valid <= 1'b0;
+    else if (IF_ready_go)
+        IF_valid <= to_IF_valid;
+end
+
+//pc信号控制
+always @(posedge clk) begin
+    if (reset)
+        pc <= 32'h1bfffffc;//使重置后的pc为0x1c000000
+    else
+        pc <=nextpc;
+end
+
+//读inst_sram
+assign inst_sram_en = to_IF_valid & IF_allow_in;//读nextpc地址，所以判断输入数据是否有效
+assign inst_sram_we = {4{1'b0}};
+assign inst_sram_addr = nextpc;
+assign inst_sram_wdata = 32'b0;
+assign inst = inst_sram_rdata;
+
+//传递数据
+assign to_ID_data = {pc, inst};//{32, 32}
+
+endmodule
+
+module ID_stage(
+    input   wire                          clk,
+    input   wire                          reset,
+
+    input   wire                    
+    input   wire                          EX_allow_in,
+    input   wire [to_ID_data_width-1:0]   to_ID_data,
+    output  wire [to_EX_data_width-1:0]   to_EX_data,
+    output  wire [31:0]                   nextpc,
+    output  wire                          ID_to_EX_valid,
+    output  wire                          ID_allow_in,
+
+)
+
+reg ID_valid;
+wire ID_ready_go;
+
 wire [31:0] seq_pc;
-wire [31:0] nextpc;
 wire        br_taken;
 wire [31:0] br_target;
 wire [31:0] inst;
-reg  [31:0] pc;
+wire [31:0] pc;
 
 wire [11:0] alu_op;
 wire        load_op;
@@ -115,23 +225,23 @@ wire [31:0] alu_result ;
 wire [31:0] mem_result;
 wire [31:0] final_result;
 
-assign seq_pc       = pc + 3'h4;
-assign nextpc       = br_taken ? br_target : seq_pc;
+//控制阻塞信号
+assign ID_ready_go = 1'b1;//无阻塞
+assign ID_allow_in = ~ID_valid | (ID_ready_go & EX_allow_in);
+assign ID_to_EX_valid = ID_valid & ID_ready_go;
 
 always @(posedge clk) begin
-    if (reset) begin
-        pc <= 32'h1bfffffc;     //trick: to make nextpc be 0x1c000000 during reset 
-    end
-    else begin
-        pc <= nextpc;
-    end
+    if (reset)
+        ID_valid <= 1'b0;
+    else if (ID_ready_go)
+        ID_valid <= IF_to_ID_valid;
 end
 
-assign inst_sram_en    = 1'b1;
-assign inst_sram_we    = {4{1'b0}};
-assign inst_sram_addr  = pc;
-assign inst_sram_wdata = 32'b0;
-assign inst            = inst_sram_rdata;
+assign {pc, inst} = to_ID_data;
+assign to_EX_data = {}
+
+assign seq_pc       = pc + 3'h4;
+assign nextpc       = br_taken ? br_target : seq_pc;
 
 assign op_31_26  = inst[31:26];
 assign op_25_22  = inst[25:22];
@@ -249,95 +359,4 @@ assign br_taken = (   inst_beq  &&  rj_eq_rd
 assign br_target = (inst_beq || inst_bne || inst_bl || inst_b) ? (pc + br_offs) :
                                                    /*inst_jirl*/ (rj_value + jirl_offs);
 
-assign alu_src1 = src1_is_pc  ? pc[31:0] : rj_value;
-assign alu_src2 = src2_is_imm ? imm : rkd_value;
-
-alu u_alu(
-    .alu_op     (alu_op    ),
-    .alu_src1   (alu_src1  ),
-    .alu_src2   (alu_src2  ),
-    .alu_result (alu_result)
-    );
-
-assign data_sram_en    = 1'b1;
-assign data_sram_we    = {4{mem_we && valid}};
-assign data_sram_addr  = alu_result;
-assign data_sram_wdata = rkd_value;
-
-assign mem_result   = data_sram_rdata;
-assign final_result = res_from_mem ? mem_result : alu_result;
-
-assign rf_we    = gr_we && valid;
-assign rf_waddr = dest;
-assign rf_wdata = final_result;
-
-// debug info generate
-assign debug_wb_pc       = pc;
-assign debug_wb_rf_we   = {4{rf_we}};
-assign debug_wb_rf_wnum  = dest;
-assign debug_wb_rf_wdata = final_result;
-
 endmodule
-
-parameter to_ID_data_width = 64;
-
-module IF_stage(
-    input   wire                        clk,
-    input   wire                        reset,
-
-    output  wire                        inst_sram_en,
-    output  wire [3:0]                  inst_sram_we,
-    output  wire [31:0]                 inst_sram_addr,
-    output  wire [31:0]                 inst_sram_wdata,
-    input   wire [31:0]                 inst_sram_rdata,
-
-    input   wire                        to_IF_valid,
-    input   wire                        ID_allow_in,
-    output  wire                        IF_to_ID_valid,
-    output  wire [to_ID_data_width-1:0] to_ID_data,
-
-    input   wire [31:0]                 nextpc
-)
-
-reg IF_valid;
-wire IF_ready_go;
-wire IF_allow_in;
-wire IF_to_ID_valid;
-
-reg  [31:0] pc;
-wire [31:0] inst;
-
-wire [to_ID_data_width-1:0] to_ID_data;
-
-//控制阻塞信号
-assign IF_ready_go = 1'b1;//无阻塞
-assign IF_allow_in = ~IF_valid | (IF_ready_go & ID_allow_in);
-assign IF_to_ID_valid = IF_valid & IF_ready_go;
-
-always @(posedge clk) begin
-    if (reset)
-        IF_valid <= 1'b0;
-    else if (IF_ready_go)
-        IF_valid <= to_IF_valid;
-end
-
-//pc信号控制
-always @(posedge clk) begin
-    if (reset)
-        pc <= 32'h1bfffffc;//使重置后的pc为0x1c000000
-    else
-        pc <=nextpc;
-end
-
-//读inst_sram
-assign inst_sram_en = to_IF_valid & IF_allow_in;//读nextpc地址，所以判断输入数据是否有效
-assign inst_sram_we = {4{1'b0}};
-assign inst_sram_addr = nextpc;
-assign inst_sram_wdata = 32'b0;
-assign inst = inst_sram_rdata;
-
-//传递数据
-assign to_ID_data = {pc, inst};//{32, 32}
-
-endmodule
-
