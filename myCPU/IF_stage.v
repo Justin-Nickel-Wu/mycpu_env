@@ -10,20 +10,24 @@ module IF_stage(
     output  wire [31:0]                 inst_sram_wdata,
     input   wire [31:0]                 inst_sram_rdata,
 
-    input   wire                        to_IF_valid,
-    input   wire                        ID_allow_in,
-    output  wire                        IF_to_ID_valid,
+    input   wire                         to_IF_valid,
+    input   wire                         ID_allow_in,
+    output  wire                         IF_to_ID_valid,
     output  wire [`to_ID_data_width-1:0] to_ID_data,
-
-    input   wire [31:0]                 nextpc
+    input   wire [`br_data_width-1:0]    br_data
 );
 
-reg IF_valid;
+reg  IF_valid;
 wire IF_ready_go;
 wire IF_allow_in;
 
 reg  [31:0] pc;
 wire [31:0] inst;
+
+wire [31:0] nextpc;
+wire [31:0] seq_pc;
+wire        br_taken;
+wire [31:0] br_target;
 
 //控制阻塞信号
 assign IF_ready_go = 1'b1;//无阻塞
@@ -44,6 +48,10 @@ always @(posedge clk) begin
     else if (to_IF_valid && IF_allow_in)
         pc <= nextpc;
 end
+
+assign {br_taken, br_target} = br_data;
+assign seq_pc       = pc + 3'h4;
+assign nextpc       = br_taken ? br_target : seq_pc;
 
 //读inst_sram
 

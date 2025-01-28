@@ -24,11 +24,6 @@ module mycpu_top(
 
 wire reset;
 
-wire to_IF_valid;
-wire to_ID_valid;
-wire to_EX_valid;
-wire to_MEM_valid;
-
 wire ID_allow_in;
 wire EX_allow_in;
 wire MEM_allow_in;
@@ -40,11 +35,11 @@ wire ID_to_EX_valid;
 wire EX_to_MEM_valid;
 wire MEM_to_WB_valid;
 
-wire [`to_ID_data_width-1:0] to_ID_data;
-wire [`to_EX_data_width-1:0] to_EX_data;
-wire [`to_MEM_data_width-1:0] to_MEM_data;
-wire [`to_WB_data_width-1:0] to_WB_data;
-wire [31:0] nextpc;
+wire [`to_ID_data_width-1  :0]   to_ID_data;
+wire [`to_EX_data_width-1  :0]   to_EX_data;
+wire [`to_MEM_data_width-1 :0]   to_MEM_data;
+wire [`to_WB_data_width-1  :0]   to_WB_data;
+wire [`br_data_width-1     :0]   br_data;
 
 assign reset = ~resetn;
 
@@ -62,7 +57,7 @@ IF_stage u_IF_stage(
     .ID_allow_in    (ID_allow_in),
     .IF_to_ID_valid (IF_to_ID_valid),
     .to_ID_data     (to_ID_data),
-    .nextpc         (nextpc)
+    .br_data         (br_data)
 );
 
 ID_stage u_ID_stage(
@@ -71,11 +66,11 @@ ID_stage u_ID_stage(
     .to_ID_data     (to_ID_data),
     .EX_allow_in    (EX_allow_in),
     .to_EX_data     (to_EX_data),
-    .nextpc         (nextpc),
 //    .to_IF_valid   (to_IF_valid),
     .IF_to_ID_valid (IF_to_ID_valid),
     .ID_to_EX_valid (ID_to_EX_valid),
-    .ID_allow_in    (ID_allow_in)
+    .ID_allow_in    (ID_allow_in),
+    .br_data        (br_data)
 );
 
 EX_stage u_EX_stage(
@@ -107,7 +102,7 @@ MEM_stage u_MEM_stage(
 
 WB_stage u_WB_stage(
     .clk            (clk),
-    .reset          (resetn),
+    .reset          (reset),
 
     .to_WB_data     (to_WB_data),
     .MEM_to_WB_valid(MEM_to_WB_valid),

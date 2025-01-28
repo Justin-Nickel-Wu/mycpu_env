@@ -20,13 +20,18 @@ module MEM_stage(
 
 reg                           MEM_valid;
 wire                          MEM_ready_go;
-reg  [`to_MEM_data_width-1:0]  to_MEM_data_r;
+reg  [`to_MEM_data_width-1:0] to_MEM_data_r;
 
 wire [31:0] pc;
 wire [31:0] alu_result;
 wire [31:0] rkd_value;
 wire        mem_we;
 wire        res_from_mem;
+wire [4:0]  dest;
+wire        gr_we;
+
+wire [31:0] mem_result;
+wire [31:0] final_result;
 
 assign MEM_ready_go = 1'b1;//无阻塞
 assign MEM_allow_in = ~MEM_valid | (MEM_ready_go & WB_allow_in);
@@ -51,7 +56,7 @@ assign {pc,
         gr_we} = to_MEM_data_r;
 
 assign to_WB_data = {pc,//32
-                     dest, //32
+                     dest, //5
                      final_result, //32
                      gr_we //1
                     };                    

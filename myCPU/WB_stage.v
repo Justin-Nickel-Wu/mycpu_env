@@ -19,7 +19,7 @@ wire WB_ready_go;
 reg [`to_WB_data_width-1:0] to_WB_data_r;
 
 wire [31:0] pc;
-wire [31:0] dest;
+wire [4:0] dest;
 wire [31:0] final_result;
 wire        gr_we;
 

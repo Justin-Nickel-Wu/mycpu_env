@@ -8,10 +8,10 @@ module ID_stage(
     input   wire                          EX_allow_in,
     input   wire [`to_ID_data_width-1:0]  to_ID_data,
     output  wire [`to_EX_data_width-1:0]  to_EX_data,
-    output  wire [31:0]                   nextpc,
 //    output  wire                          to_IF_valid,
     output  wire                          ID_to_EX_valid,
-    output  wire                          ID_allow_in
+    output  wire                          ID_allow_in,
+    output  wire [`br_data_width-1:0]     br_data
 );
 
 reg                            ID_valid;
@@ -89,12 +89,6 @@ wire [ 4:0] rf_raddr1;
 wire [31:0] rf_rdata1;
 wire [ 4:0] rf_raddr2;
 wire [31:0] rf_rdata2;
-wire        rf_we   ;
-wire [ 4:0] rf_waddr;
-wire [31:0] rf_wdata;
-
-wire [31:0] mem_result;
-wire [31:0] final_result;
 
 //控制阻塞信号
 assign ID_ready_go = 1'b1;//无阻塞
@@ -108,9 +102,10 @@ always @(posedge clk) begin
     else if (ID_ready_go)
         ID_valid <= IF_to_ID_valid;
 
-    if (ID_allow_in)
+    if (IF_to_ID_valid && ID_allow_in)
         to_ID_data_r = to_ID_data;
 end
+
 assign {pc, inst} = to_ID_data_r;
 assign to_EX_data ={pc, //32
                     rj_value, //32
@@ -121,12 +116,10 @@ assign to_EX_data ={pc, //32
                     src2_is_imm, //1
                     mem_we, //1
                     res_from_mem, //1
-                    dest, //32
+                    dest, //5
                     gr_we //1
                     };
-
-assign seq_pc       = pc + 3'h4;
-assign nextpc       = br_taken ? br_target : seq_pc;
+assign br_data = {br_taken, br_target};
 
 assign op_31_26  = inst[31:26];
 assign op_25_22  = inst[25:22];

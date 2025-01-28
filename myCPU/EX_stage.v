@@ -21,8 +21,16 @@ wire [31:0] alu_src2   ;
 wire [31:0] alu_result ;
 
 wire [31:0] pc;
-wire mem_we;
-wire res_from_mem;
+wire [31:0] rj_value;
+wire [31:0] rkd_value;
+wire [31:0] imm;
+wire [11:0] alu_op;
+wire        src1_is_pc;
+wire        src2_is_imm;
+wire        mem_we;
+wire        res_from_mem;
+wire [4:0]  dest;
+wire        gr_we;
 
 assign EX_ready_go = 1'b1;//无阻塞
 assign EX_allow_in = ~EX_valid | (EX_ready_go & MEM_allow_in);
@@ -55,7 +63,7 @@ assign to_MEM_data = {pc, //32
                       rkd_value, //32
                       mem_we, //1
                       res_from_mem,//1
-                      dest, //32
+                      dest, //5
                       gr_we //1
                     };
 
