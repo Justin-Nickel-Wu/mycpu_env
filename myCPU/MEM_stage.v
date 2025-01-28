@@ -4,9 +4,6 @@ module MEM_stage(
     input   wire                          clk,
     input   wire                          reset,
 
-    output wire        data_sram_en,
-    output wire [3:0]  data_sram_we, 
-    output wire [31:0] data_sram_wdata,
     input  wire [31:0] data_sram_rdata,
 
     input   wire                          WB_allow_in,
@@ -23,8 +20,6 @@ reg  [`to_MEM_data_width-1:0] to_MEM_data_r;
 
 wire [31:0] pc;
 wire [31:0] alu_result;
-wire [31:0] rkd_value;
-wire        mem_we;
 wire        res_from_mem;
 wire [4:0]  dest;
 wire        gr_we;
@@ -48,8 +43,6 @@ end
 
 assign {pc,
         alu_result,
-        rkd_value,
-        mem_we,
         res_from_mem,
         dest,
         gr_we} = to_MEM_data_r;
@@ -60,17 +53,8 @@ assign to_WB_data = {pc,//32
                      gr_we //1
                     };                    
 
-assign data_sram_en    = 1'b1;
-assign data_sram_we    = {4{mem_we && MEM_valid}};
-assign data_sram_wdata = rkd_value;
-
 assign mem_result   = data_sram_rdata;
 assign final_result = res_from_mem ? mem_result : alu_result;
 
-//debug info generate
-always @(posedge clk) begin
-    if (data_sram_we == 4'b1111)
-        $display("WRITE MEM, pc: %8h, addr: %8h, data: %8h",pc, alu_result, rkd_value);
-end
 
 endmodule

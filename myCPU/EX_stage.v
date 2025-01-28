@@ -11,7 +11,10 @@ module EX_stage(
     output  wire                          EX_to_MEM_valid,
     output  wire                          EX_allow_in,
 
-    output  wire [31:0]                   data_sram_addr
+    output  wire                          data_sram_en,
+    output  wire [3:0]                    data_sram_we,
+    output  wire [31:0]                   data_sram_addr,
+    output  wire [31:0]                   data_sram_wdata
 );
 
 reg                          EX_valid;
@@ -62,8 +65,6 @@ assign {pc,
 
 assign to_MEM_data = {pc, //32
                       alu_result, //32
-                      rkd_value, //32
-                      mem_we, //1
                       res_from_mem,//1
                       dest, //5
                       gr_we //1
@@ -71,7 +72,19 @@ assign to_MEM_data = {pc, //32
 
 assign alu_src1 = src1_is_pc  ? pc[31:0] : rj_value;
 assign alu_src2 = src2_is_imm ? imm : rkd_value;
+
+assign data_sram_en    = 1'b1;
+assign data_sram_we    = {4{mem_we && EX_valid}};
 assign data_sram_addr = alu_result;
+assign data_sram_wdata = rkd_value;
+
+/*
+//输出写内存信息
+always @(posedge clk) begin
+    if (data_sram_we == 4'b1111)
+        $display("WRITE MEM, pc: %8h, addr: %8h, data: %8h",pc, alu_result, rkd_value);
+end
+*/
 
 alu u_alu(
     .alu_op     (alu_op    ),
