@@ -18,8 +18,9 @@ module MEM_stage(
     output  wire                          MEM_allow_in
 );
 
-reg MEM_valid;
-wire MEM_ready_go;
+reg                           MEM_valid;
+wire                          MEM_ready_go;
+reg  [`to_MEM_data_width-1:0]  to_MEM_data_r;
 
 wire [31:0] pc;
 wire [31:0] alu_result;
@@ -36,6 +37,9 @@ always @(posedge clk) begin
         MEM_valid <= 1'b0;
     else if (MEM_ready_go)
         MEM_valid <= EX_to_MEM_valid;
+
+    if (MEM_allow_in)
+            to_MEM_data_r = to_MEM_data;
 end
 
 assign {pc,
@@ -44,7 +48,7 @@ assign {pc,
         mem_we,
         res_from_mem,
         dest,
-        gr_we} = to_MEM_data;
+        gr_we} = to_MEM_data_r;
 
 assign to_WB_data = {pc,//32
                      dest, //32

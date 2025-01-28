@@ -48,7 +48,7 @@ wire [31:0] nextpc;
 
 assign reset = ~resetn;
 
-assign to_IF_valid = 1'b1;//无阻塞
+assign to_IF_valid = resetn;//
 
 IF_stage u_IF_stage(
     .clk            (clk),
@@ -72,6 +72,7 @@ ID_stage u_ID_stage(
     .EX_allow_in    (EX_allow_in),
     .to_EX_data     (to_EX_data),
     .nextpc         (nextpc),
+//    .to_IF_valid   (to_IF_valid),
     .IF_to_ID_valid (IF_to_ID_valid),
     .ID_to_EX_valid (ID_to_EX_valid),
     .ID_allow_in    (ID_allow_in)

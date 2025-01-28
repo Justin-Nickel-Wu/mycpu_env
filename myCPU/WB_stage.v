@@ -16,6 +16,7 @@ module WB_stage(
 
 reg WB_valid;
 wire WB_ready_go;
+reg [`to_WB_data_width-1:0] to_WB_data_r;
 
 wire [31:0] pc;
 wire [31:0] dest;
@@ -30,12 +31,15 @@ always @(posedge clk) begin
         WB_valid <= 1'b0;
     else if (WB_ready_go)
         WB_valid <= MEM_to_WB_valid;
+
+    if (WB_allow_in)
+            to_WB_data_r = to_WB_data;
 end
 
 assign {pc,
         dest,
         final_result,
-        gr_we} = to_WB_data;
+        gr_we} = to_WB_data_r;
 
 assign rf_we    = gr_we && WB_valid;
 assign rf_waddr = dest;

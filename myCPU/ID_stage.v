@@ -6,15 +6,17 @@ module ID_stage(
 
     input   wire                          IF_to_ID_valid,             
     input   wire                          EX_allow_in,
-    input   wire [`to_ID_data_width-1:0]   to_ID_data,
-    output  wire [`to_EX_data_width-1:0]   to_EX_data,
+    input   wire [`to_ID_data_width-1:0]  to_ID_data,
+    output  wire [`to_EX_data_width-1:0]  to_EX_data,
     output  wire [31:0]                   nextpc,
+//    output  wire                          to_IF_valid,
     output  wire                          ID_to_EX_valid,
     output  wire                          ID_allow_in
 );
 
-reg ID_valid;
-wire ID_ready_go;
+reg                            ID_valid;
+wire                           ID_ready_go;
+reg  [`to_ID_data_width-1:0]   to_ID_data_r;
 
 wire [31:0] seq_pc;
 wire        br_taken;
@@ -98,15 +100,18 @@ wire [31:0] final_result;
 assign ID_ready_go = 1'b1;//无阻塞
 assign ID_allow_in = ~ID_valid | (ID_ready_go & EX_allow_in);
 assign ID_to_EX_valid = ID_valid & ID_ready_go;
+//assign to_IF_valid = ID_valid;
 
 always @(posedge clk) begin
     if (reset)
         ID_valid <= 1'b0;
     else if (ID_ready_go)
         ID_valid <= IF_to_ID_valid;
-end
 
-assign {pc, inst} = to_ID_data;
+    if (ID_allow_in)
+        to_ID_data_r = to_ID_data;
+end
+assign {pc, inst} = to_ID_data_r;
 assign to_EX_data ={pc, //32
                     rj_value, //32
                     rkd_value, //32

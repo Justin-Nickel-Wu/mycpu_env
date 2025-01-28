@@ -41,11 +41,12 @@ end
 always @(posedge clk) begin
     if (reset)
         pc <= 32'h1bfffffc;//使重置后的pc为0x1c000000
-    else
-        pc <=nextpc;
+    else if (to_IF_valid && IF_allow_in)
+        pc <= nextpc;
 end
 
 //读inst_sram
+
 assign inst_sram_en = to_IF_valid & IF_allow_in;//读nextpc地址，所以判断输入数据是否有效
 assign inst_sram_we = {4{1'b0}};
 assign inst_sram_addr = nextpc;

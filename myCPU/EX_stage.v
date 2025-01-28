@@ -12,8 +12,9 @@ module EX_stage(
     output  wire                          EX_allow_in
 );
 
-reg EX_valid;
-wire EX_ready_go;
+reg                          EX_valid;
+wire                         EX_ready_go;
+reg  [`to_EX_data_width-1:0]  to_EX_data_r;
 
 wire [31:0] alu_src1   ;
 wire [31:0] alu_src2   ;
@@ -32,6 +33,9 @@ always @(posedge clk) begin
         EX_valid <= 1'b0;
     else if (EX_ready_go)
         EX_valid <= ID_to_EX_valid;
+
+    if (EX_allow_in)
+            to_EX_data_r = to_EX_data;
 end
 
 assign {pc,
@@ -44,7 +48,7 @@ assign {pc,
         mem_we,
         res_from_mem,
         dest,
-        gr_we} = to_EX_data;
+        gr_we} = to_EX_data_r;
 
 assign to_MEM_data = {pc, //32
                       alu_result, //32
