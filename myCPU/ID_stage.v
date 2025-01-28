@@ -11,7 +11,12 @@ module ID_stage(
 //    output  wire                          to_IF_valid,
     output  wire                          ID_to_EX_valid,
     output  wire                          ID_allow_in,
-    output  wire [`br_data_width-1:0]     br_data
+    output  wire [`br_data_width-1:0]     br_data,
+
+    output  wire [4:0]                    rf_raddr1,
+    input   wire [31:0]                   rf_rdata1,
+    output  wire [4:0]                    rf_raddr2,
+    input   wire [31:0]                   rf_rdata2
 );
 
 reg                            ID_valid;
@@ -84,11 +89,6 @@ wire        need_si16;
 wire        need_si20;
 wire        need_si26;
 wire        src2_is_4;
-
-wire [ 4:0] rf_raddr1;
-wire [31:0] rf_rdata1;
-wire [ 4:0] rf_raddr2;
-wire [31:0] rf_rdata2;
 
 //控制阻塞信号
 assign ID_ready_go = 1'b1;//无阻塞
@@ -213,16 +213,7 @@ assign dest          = dst_is_r1 ? 5'd1 : rd;
 
 assign rf_raddr1 = rj;
 assign rf_raddr2 = src_reg_is_rd ? rd :rk;
-regfile u_regfile(
-    .clk    (clk      ),
-    .raddr1 (rf_raddr1),
-    .rdata1 (rf_rdata1),
-    .raddr2 (rf_raddr2),
-    .rdata2 (rf_rdata2),
-    .we     (rf_we    ),
-    .waddr  (rf_waddr ),
-    .wdata  (rf_wdata )
-    );
+
 
 assign rj_value  = rf_rdata1;
 assign rkd_value = rf_rdata2;

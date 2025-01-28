@@ -41,6 +41,14 @@ wire [`to_MEM_data_width-1 :0]   to_MEM_data;
 wire [`to_WB_data_width-1  :0]   to_WB_data;
 wire [`br_data_width-1     :0]   br_data;
 
+wire [ 4:0]  rf_raddr1;
+wire [31:0]  rf_rdata1;
+wire [ 4:0]  rf_raddr2;
+wire [31:0]  rf_rdata2;
+wire         rf_we;
+wire [ 4:0]  rf_waddr;
+wire [31:0]  rf_wdata;
+
 assign reset = ~resetn;
 
 assign to_IF_valid = resetn;//
@@ -70,7 +78,12 @@ ID_stage u_ID_stage(
     .IF_to_ID_valid (IF_to_ID_valid),
     .ID_to_EX_valid (ID_to_EX_valid),
     .ID_allow_in    (ID_allow_in),
-    .br_data        (br_data)
+    .br_data        (br_data),
+
+    .rf_raddr1      (rf_raddr1),
+    .rf_rdata1      (rf_rdata1),
+    .rf_raddr2      (rf_raddr2),
+    .rf_rdata2      (rf_rdata2)
 );
 
 EX_stage u_EX_stage(
@@ -108,10 +121,25 @@ WB_stage u_WB_stage(
     .MEM_to_WB_valid(MEM_to_WB_valid),
     .WB_allow_in    (WB_allow_in),
 
+    .rf_we          (rf_we),
+    .rf_waddr       (rf_waddr),
+    .rf_wdata       (rf_wdata),
+
     .debug_wb_pc       (debug_wb_pc),
     .debug_wb_rf_we    (debug_wb_rf_we),
     .debug_wb_rf_wnum  (debug_wb_rf_wnum),
     .debug_wb_rf_wdata (debug_wb_rf_wdata)
 );
+
+regfile u_regfile(
+    .clk    (clk      ),
+    .raddr1 (rf_raddr1),
+    .rdata1 (rf_rdata1),
+    .raddr2 (rf_raddr2),
+    .rdata2 (rf_rdata2),
+    .we     (rf_we    ),
+    .waddr  (rf_waddr ),
+    .wdata  (rf_wdata )
+    );
 
 endmodule

@@ -8,6 +8,10 @@ module WB_stage(
     input   wire                          MEM_to_WB_valid,
     output  wire                          WB_allow_in,
 
+    output  wire                          rf_we,
+    output  wire [4:0]                    rf_waddr,
+    output  wire [31:0]                   rf_wdata,
+
     output wire  [31:0]                   debug_wb_pc,
     output wire  [ 3:0]                   debug_wb_rf_we,
     output wire  [ 4:0]                   debug_wb_rf_wnum,
