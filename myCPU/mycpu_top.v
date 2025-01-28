@@ -34,6 +34,7 @@ wire EX_allow_in;
 wire MEM_allow_in;
 wire WB_allow_in;
 
+wire to_IF_valid;
 wire IF_to_ID_valid;
 wire ID_to_EX_valid;
 wire EX_to_MEM_valid;
@@ -46,6 +47,8 @@ wire [`to_WB_data_width-1:0] to_WB_data;
 wire [31:0] nextpc;
 
 assign reset = ~resetn;
+
+assign to_IF_valid = 1'b1;//无阻塞
 
 IF_stage u_IF_stage(
     .clk            (clk),
