@@ -95,6 +95,7 @@ MEM_stage u_MEM_stage(
     .data_sram_rdata(data_sram_rdata),
     .WB_allow_in    (WB_allow_in),
     .to_MEM_data    (to_MEM_data),
+    .to_WB_data     (to_WB_data),
     .EX_to_MEM_valid(EX_to_MEM_valid),
     .MEM_to_WB_valid(MEM_to_WB_valid),
     .MEM_allow_in   (MEM_allow_in)
@@ -103,18 +104,15 @@ MEM_stage u_MEM_stage(
 WB_stage u_WB_stage(
     .clk            (clk),
     .reset          (resetn),
+
     .to_WB_data     (to_WB_data),
     .MEM_to_WB_valid(MEM_to_WB_valid),
-    .WB_allow_in    (WB_allow_in)
+    .WB_allow_in    (WB_allow_in),
+
+    .debug_wb_pc       (debug_wb_pc),
+    .debug_wb_rf_we    (debug_wb_rf_we),
+    .debug_wb_rf_wnum  (debug_wb_rf_wnum),
+    .debug_wb_rf_wdata (debug_wb_rf_wdata)
 );
-
-
-/*
-// debug info generate
-assign debug_wb_pc       = pc;
-assign debug_wb_rf_we   = {4{rf_we}};
-assign debug_wb_rf_wnum  = dest;
-assign debug_wb_rf_wdata = final_result;
-*/
 
 endmodule

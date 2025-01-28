@@ -46,7 +46,8 @@ assign {pc,
         dest,
         gr_we} = to_EX_data;
 
-assign to_MEM_data = {alu_result, //32
+assign to_MEM_data = {pc, //32
+                      alu_result, //32
                       rkd_value, //32
                       mem_we, //1
                       res_from_mem,//1

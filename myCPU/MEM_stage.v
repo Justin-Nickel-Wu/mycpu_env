@@ -21,6 +21,7 @@ module MEM_stage(
 reg MEM_valid;
 wire MEM_ready_go;
 
+wire [31:0] pc;
 wire [31:0] alu_result;
 wire [31:0] rkd_value;
 wire        mem_we;
@@ -37,14 +38,16 @@ always @(posedge clk) begin
         MEM_valid <= EX_to_MEM_valid;
 end
 
-assign {alu_result,
+assign {pc,
+        alu_result,
         rkd_value,
         mem_we,
         res_from_mem,
         dest,
         gr_we} = to_MEM_data;
 
-assign to_WB_data = {dest, //32
+assign to_WB_data = {pc,//32
+                     dest, //32
                      final_result, //32
                      gr_we //1
                     };                    
