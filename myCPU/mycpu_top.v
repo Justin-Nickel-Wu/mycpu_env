@@ -94,17 +94,20 @@ EX_stage u_EX_stage(
     .to_MEM_data    (to_MEM_data),
     .ID_to_EX_valid (ID_to_EX_valid),
     .EX_to_MEM_valid(EX_to_MEM_valid),
-    .EX_allow_in    (EX_allow_in)
+    .EX_allow_in    (EX_allow_in),
+
+    .data_sram_addr (data_sram_addr)
 );
 
 MEM_stage u_MEM_stage(
     .clk            (clk),
     .reset          (reset),
+
     .data_sram_en   (data_sram_en),
     .data_sram_we   (data_sram_we),
-    .data_sram_addr (data_sram_addr),
     .data_sram_wdata(data_sram_wdata),
     .data_sram_rdata(data_sram_rdata),
+
     .WB_allow_in    (WB_allow_in),
     .to_MEM_data    (to_MEM_data),
     .to_WB_data     (to_WB_data),

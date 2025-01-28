@@ -9,7 +9,9 @@ module EX_stage(
     output  wire [`to_MEM_data_width-1:0]  to_MEM_data,
     input   wire                          ID_to_EX_valid,
     output  wire                          EX_to_MEM_valid,
-    output  wire                          EX_allow_in
+    output  wire                          EX_allow_in,
+
+    output  wire [31:0]                   data_sram_addr
 );
 
 reg                          EX_valid;
@@ -69,6 +71,7 @@ assign to_MEM_data = {pc, //32
 
 assign alu_src1 = src1_is_pc  ? pc[31:0] : rj_value;
 assign alu_src2 = src2_is_imm ? imm : rkd_value;
+assign data_sram_addr = alu_result;
 
 alu u_alu(
     .alu_op     (alu_op    ),
