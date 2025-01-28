@@ -5,8 +5,9 @@ module EX_stage(
     input   wire                          reset,
 
     input   wire                          MEM_allow_in,
-    input   wire [to_EX_data_width-1:0]   to_EX_data,
-    output  wire [to_MEM_data_width-1:0]  to_MEM_data,
+    input   wire [`to_EX_data_width-1:0]   to_EX_data,
+    output  wire [`to_MEM_data_width-1:0]  to_MEM_data,
+    input   wire                          ID_to_EX_valid,
     output  wire                          EX_to_MEM_valid,
     output  wire                          EX_allow_in
 );
@@ -18,6 +19,7 @@ wire [31:0] alu_src1   ;
 wire [31:0] alu_src2   ;
 wire [31:0] alu_result ;
 
+wire [31:0] pc;
 wire mem_we;
 wire res_from_mem;
 

@@ -6,8 +6,8 @@ module ID_stage(
 
     input   wire                          IF_to_ID_valid,             
     input   wire                          EX_allow_in,
-    input   wire [to_ID_data_width-1:0]   to_ID_data,
-    output  wire [to_EX_data_width-1:0]   to_EX_data,
+    input   wire [`to_ID_data_width-1:0]   to_ID_data,
+    output  wire [`to_EX_data_width-1:0]   to_EX_data,
     output  wire [31:0]                   nextpc,
     output  wire                          ID_to_EX_valid,
     output  wire                          ID_allow_in
@@ -235,7 +235,7 @@ assign br_taken = (   inst_beq  &&  rj_eq_rd
                    || inst_jirl
                    || inst_bl
                    || inst_b
-                  ) && valid;
+                  ) && ID_valid;
 assign br_target = (inst_beq || inst_bne || inst_bl || inst_b) ? (pc + br_offs) :
                                                    /*inst_jirl*/ (rj_value + jirl_offs);
 

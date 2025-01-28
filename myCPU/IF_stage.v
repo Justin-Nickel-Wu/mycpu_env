@@ -13,7 +13,7 @@ module IF_stage(
     input   wire                        to_IF_valid,
     input   wire                        ID_allow_in,
     output  wire                        IF_to_ID_valid,
-    output  wire [to_ID_data_width-1:0] to_ID_data,
+    output  wire [`to_ID_data_width-1:0] to_ID_data,
 
     input   wire [31:0]                 nextpc
 );

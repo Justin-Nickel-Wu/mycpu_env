@@ -39,11 +39,11 @@ wire ID_to_EX_valid;
 wire EX_to_MEM_valid;
 wire MEM_to_WB_valid;
 
-wire [to_ID_data_width-1:0] to_ID_data;
-wire [to_EX_data_width-1:0] to_EX_data;
-wire [to_MEM_data_width-1:0] to_MEM_data;
-wire [to_WB_data_width-1:0] to_WB_data;
-wire nextpc;
+wire [`to_ID_data_width-1:0] to_ID_data;
+wire [`to_EX_data_width-1:0] to_EX_data;
+wire [`to_MEM_data_width-1:0] to_MEM_data;
+wire [`to_WB_data_width-1:0] to_WB_data;
+wire [31:0] nextpc;
 
 assign reset = ~resetn;
 
@@ -65,11 +65,11 @@ IF_stage u_IF_stage(
 ID_stage u_ID_stage(
     .clk            (clk),
     .reset          (reset),
-    .IF_to_ID_valid (IF_to_ID_valid),
     .to_ID_data     (to_ID_data),
     .EX_allow_in    (EX_allow_in),
     .to_EX_data     (to_EX_data),
     .nextpc         (nextpc),
+    .IF_to_ID_valid (IF_to_ID_valid),
     .ID_to_EX_valid (ID_to_EX_valid),
     .ID_allow_in    (ID_allow_in)
 );
@@ -108,10 +108,13 @@ WB_stage u_WB_stage(
     .WB_allow_in    (WB_allow_in)
 );
 
+
+/*
 // debug info generate
 assign debug_wb_pc       = pc;
 assign debug_wb_rf_we   = {4{rf_we}};
 assign debug_wb_rf_wnum  = dest;
 assign debug_wb_rf_wdata = final_result;
+*/
 
 endmodule

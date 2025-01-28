@@ -11,8 +11,8 @@ module MEM_stage(
     input  wire [31:0] data_sram_rdata,
 
     input   wire                          WB_allow_in,
-    input   wire [to_MEM_data_width-1:0]  to_MEM_data,
-    output  wire [to_WB_data_width-1:0]   to_WB_data,
+    input   wire [`to_MEM_data_width-1:0]  to_MEM_data,
+    output  wire [`to_WB_data_width-1:0]   to_WB_data,
     input   wire                          EX_to_MEM_valid,
     output  wire                          MEM_to_WB_valid,
     output  wire                          MEM_allow_in
@@ -50,7 +50,7 @@ assign to_WB_data = {dest, //32
                     };                    
 
 assign data_sram_en    = 1'b1;
-assign data_sram_we    = {4{mem_we && valid}};
+assign data_sram_we    = {4{mem_we && MEM_valid}};
 assign data_sram_addr  = alu_result;
 assign data_sram_wdata = rkd_value;
 

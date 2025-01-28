@@ -4,7 +4,7 @@ module WB_stage(
     input   wire                          clk,
     input   wire                          reset,
 
-    input   wire [to_WB_data_width-1:0]   to_WB_data,
+    input   wire [`to_WB_data_width-1:0]   to_WB_data,
     input   wire                          MEM_to_WB_valid,
     output  wire                          WB_allow_in
 );
@@ -16,7 +16,7 @@ wire [31:0] dest;
 wire [31:0] final_result;
 wire        gr_we;
 
-assgin WB_ready_go = 1'b1;//无阻塞
+assign WB_ready_go = 1'b1;//无阻塞
 assign WB_allow_in = ~WB_valid | WB_ready_go;
 
 always @(posedge clk) begin
