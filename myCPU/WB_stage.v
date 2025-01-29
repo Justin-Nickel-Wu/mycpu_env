@@ -36,7 +36,7 @@ always @(posedge clk) begin
     else if (WB_ready_go)
         WB_valid <= MEM_to_WB_valid;
 
-    if (WB_allow_in)
+    if (MEM_to_WB_valid && WB_allow_in)
             to_WB_data_r = to_WB_data;
 end
 

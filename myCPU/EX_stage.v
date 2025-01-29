@@ -47,7 +47,7 @@ always @(posedge clk) begin
     else if (EX_ready_go)
         EX_valid <= ID_to_EX_valid;
 
-    if (EX_allow_in)
+    if (ID_to_EX_valid && EX_allow_in)
             to_EX_data_r = to_EX_data;
 end
 

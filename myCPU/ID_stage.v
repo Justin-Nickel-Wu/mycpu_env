@@ -99,6 +99,8 @@ assign ID_to_EX_valid = ID_valid & ID_ready_go;
 always @(posedge clk) begin
     if (reset)
         ID_valid <= 1'b0;
+    else if (br_taken)
+        ID_valid <= 1'b0;
     else if (ID_ready_go)
         ID_valid <= IF_to_ID_valid;
 

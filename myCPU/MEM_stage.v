@@ -37,7 +37,7 @@ always @(posedge clk) begin
     else if (MEM_ready_go)
         MEM_valid <= EX_to_MEM_valid;
 
-    if (MEM_allow_in)
+    if (EX_to_MEM_valid && MEM_allow_in)
             to_MEM_data_r = to_MEM_data;
 end
 
