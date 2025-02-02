@@ -37,8 +37,6 @@ assign IF_to_ID_valid = IF_valid & IF_ready_go;
 always @(posedge clk) begin
     if (reset)
         IF_valid <= 1'b0;
-    else if (br_taken)
-        IF_valid <= 1'b0;
     else if (IF_ready_go)
         IF_valid <= to_IF_valid;
 end

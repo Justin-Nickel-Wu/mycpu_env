@@ -98,10 +98,12 @@ wire        no_rj;
 wire        no_rkd;
 wire        rj_wait;
 wire        rkd_wait;
+wire        need_wait;
 //控制阻塞信号
 assign rj_wait  = ~no_rj  && (rf_raddr1 != 5'b0) && (rf_raddr1 == EX_dest || rf_raddr1 == MEM_dest || rf_raddr1 == WB_dest);
 assign rkd_wait = ~no_rkd && (rf_raddr2 != 5'b0) && (rf_raddr2 == EX_dest || rf_raddr2 == MEM_dest || rf_raddr2 == WB_dest);
-assign ID_ready_go = ~(rj_wait || rkd_wait);
+assign need_wait = rj_wait || rkd_wait;
+assign ID_ready_go = ~need_wait || ~ID_valid;
 assign ID_allow_in = ~ID_valid | (ID_ready_go & EX_allow_in);
 assign ID_to_EX_valid = ID_valid & ID_ready_go;
 //assign to_IF_valid = ID_valid;
@@ -239,7 +241,7 @@ assign br_taken = (   inst_beq  &&  rj_eq_rd
                    || inst_jirl
                    || inst_bl
                    || inst_b
-                  ) && ID_valid;
+                ) && ID_valid && ~need_wait; //br_taken会强制置ID_valid为0，当ID需要阻塞时br_taken也不能为1
 assign br_target = (inst_beq || inst_bne || inst_bl || inst_b) ? (pc + br_offs) :
                                                    /*inst_jirl*/ (rj_value + jirl_offs);
 
