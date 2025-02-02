@@ -49,6 +49,10 @@ wire         rf_we;
 wire [ 4:0]  rf_waddr;
 wire [31:0]  rf_wdata;
 
+wire [ 4:0]  EX_dest;
+wire [ 4:0]  MEM_dest;
+wire [ 4:0]  WB_dest;
+
 assign reset = ~resetn;
 
 assign to_IF_valid = resetn;//
@@ -83,7 +87,11 @@ ID_stage u_ID_stage(
     .rf_raddr1      (rf_raddr1),
     .rf_rdata1      (rf_rdata1),
     .rf_raddr2      (rf_raddr2),
-    .rf_rdata2      (rf_rdata2)
+    .rf_rdata2      (rf_rdata2),
+
+    .EX_dest        (EX_dest),
+    .MEM_dest       (MEM_dest),
+    .WB_dest        (WB_dest)
 );
 
 EX_stage u_EX_stage(
@@ -99,7 +107,9 @@ EX_stage u_EX_stage(
     .data_sram_en   (data_sram_en),
     .data_sram_we   (data_sram_we),
     .data_sram_addr (data_sram_addr),
-    .data_sram_wdata(data_sram_wdata)
+    .data_sram_wdata(data_sram_wdata),
+
+    .EX_dest        (EX_dest)
 );
 
 MEM_stage u_MEM_stage(
@@ -113,7 +123,9 @@ MEM_stage u_MEM_stage(
     .to_WB_data     (to_WB_data),
     .EX_to_MEM_valid(EX_to_MEM_valid),
     .MEM_to_WB_valid(MEM_to_WB_valid),
-    .MEM_allow_in   (MEM_allow_in)
+    .MEM_allow_in   (MEM_allow_in),
+
+    .MEM_dest       (MEM_dest)
 );
 
 WB_stage u_WB_stage(
@@ -131,7 +143,9 @@ WB_stage u_WB_stage(
     .debug_wb_pc       (debug_wb_pc),
     .debug_wb_rf_we    (debug_wb_rf_we),
     .debug_wb_rf_wnum  (debug_wb_rf_wnum),
-    .debug_wb_rf_wdata (debug_wb_rf_wdata)
+    .debug_wb_rf_wdata (debug_wb_rf_wdata),
+
+    .WB_dest        (WB_dest)
 );
 
 regfile u_regfile(

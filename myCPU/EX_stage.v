@@ -14,7 +14,9 @@ module EX_stage(
     output  wire                          data_sram_en,
     output  wire [3:0]                    data_sram_we,
     output  wire [31:0]                   data_sram_addr,
-    output  wire [31:0]                   data_sram_wdata
+    output  wire [31:0]                   data_sram_wdata,
+
+    output  wire [4:0]                    EX_dest
 );
 
 reg                          EX_valid;
@@ -77,6 +79,8 @@ assign data_sram_en    = 1'b1;
 assign data_sram_we    = {4{mem_we && EX_valid}};
 assign data_sram_addr = alu_result;
 assign data_sram_wdata = rkd_value;
+
+assign EX_dest = dest & {5{EX_valid}};
 
 /*
 //输出写内存信息

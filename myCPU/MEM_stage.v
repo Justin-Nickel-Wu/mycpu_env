@@ -11,7 +11,9 @@ module MEM_stage(
     output  wire [`to_WB_data_width-1:0]   to_WB_data,
     input   wire                          EX_to_MEM_valid,
     output  wire                          MEM_to_WB_valid,
-    output  wire                          MEM_allow_in
+    output  wire                          MEM_allow_in,
+
+    output  wire [4:0]                    MEM_dest
 );
 
 reg                           MEM_valid;
@@ -55,6 +57,8 @@ assign to_WB_data = {pc,//32
 
 assign mem_result   = data_sram_rdata;
 assign final_result = res_from_mem ? mem_result : alu_result;
+
+assign MEM_dest = dest & {5{MEM_valid}};
 
 
 endmodule

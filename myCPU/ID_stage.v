@@ -16,7 +16,11 @@ module ID_stage(
     output  wire [4:0]                    rf_raddr1,
     input   wire [31:0]                   rf_rdata1,
     output  wire [4:0]                    rf_raddr2,
-    input   wire [31:0]                   rf_rdata2
+    input   wire [31:0]                   rf_rdata2,
+
+    input   wire [4:0]                    EX_dest,
+    input   wire [4:0]                    MEM_dest,
+    output  wire [4:0]                    WB_dest
 );
 
 reg                            ID_valid;
@@ -90,8 +94,14 @@ wire        need_si20;
 wire        need_si26;
 wire        src2_is_4;
 
+wire        no_rj;
+wire        no_rkd;
+wire        rj_wait;
+wire        rkd_wait;
 //控制阻塞信号
-assign ID_ready_go = 1'b1;//无阻塞
+assign rj_wait  = ~no_rj  && (rf_raddr1 != 5'b0) && (rf_raddr1 == EX_dest || rf_raddr1 == MEM_dest || rf_raddr1 == WB_dest);
+assign rkd_wait = ~no_rkd && (rf_raddr2 != 5'b0) && (rf_raddr2 == EX_dest || rf_raddr2 == MEM_dest || rf_raddr2 == WB_dest);
+assign ID_ready_go = ~(rj_wait || rkd_wait);
 assign ID_allow_in = ~ID_valid | (ID_ready_go & EX_allow_in);
 assign ID_to_EX_valid = ID_valid & ID_ready_go;
 //assign to_IF_valid = ID_valid;
@@ -183,6 +193,9 @@ assign need_si16  =  inst_jirl | inst_beq | inst_bne;
 assign need_si20  =  inst_lu12i_w;
 assign need_si26  =  inst_b | inst_bl;
 assign src2_is_4  =  inst_jirl | inst_bl;
+assign no_rj      =  inst_lu12i_w | inst_b | inst_bl;
+assign no_rkd     =  inst_slli_w | inst_srli_w | inst_srai_w | inst_addi_w
+                    | inst_lu12i_w | inst_ld_w | inst_jirl | inst_b | inst_bl;
 
 assign imm = src2_is_4 ? 32'h4                      :
              need_si20 ? {i20[19:0], 12'b0}         :

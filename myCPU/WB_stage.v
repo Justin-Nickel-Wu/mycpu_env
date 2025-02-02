@@ -15,7 +15,9 @@ module WB_stage(
     output wire  [31:0]                   debug_wb_pc,
     output wire  [ 3:0]                   debug_wb_rf_we,
     output wire  [ 4:0]                   debug_wb_rf_wnum,
-    output wire  [31:0]                   debug_wb_rf_wdata
+    output wire  [31:0]                   debug_wb_rf_wdata,
+
+    output wire  [4:0]                    WB_dest
 );
 
 reg WB_valid;
@@ -54,5 +56,7 @@ assign debug_wb_pc       = pc;
 assign debug_wb_rf_we   = {4{rf_we}};
 assign debug_wb_rf_wnum  = dest;
 assign debug_wb_rf_wdata = final_result;
+
+assign WB_dest = dest & {5{WB_valid}};
 
 endmodule
