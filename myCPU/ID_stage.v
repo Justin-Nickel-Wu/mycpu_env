@@ -110,7 +110,7 @@ wire        is_load;
 //控制阻塞信号
 assign rj_wait  = ~no_rj  && (rf_raddr1 != 5'b0) && (rf_raddr1 == EX_dest || rf_raddr1 == MEM_dest || rf_raddr1 == WB_dest);
 assign rkd_wait = ~no_rkd && (rf_raddr2 != 5'b0) && (rf_raddr2 == EX_dest || rf_raddr2 == MEM_dest || rf_raddr2 == WB_dest);
-assign need_wait = rj_wait || rkd_wait || is_load;
+assign need_wait = is_load; // rj_wait, rkd_wait会有前递信号来保证value的正确，无需阻塞
 assign ID_ready_go = ~need_wait || ~ID_valid;
 assign ID_allow_in = ~ID_valid | (ID_ready_go & EX_allow_in);
 assign ID_to_EX_valid = ID_valid & ID_ready_go;
