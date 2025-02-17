@@ -18,9 +18,9 @@ module ID_stage(
     output  wire [4:0]                    rf_raddr2,
     input   wire [31:0]                   rf_rdata2,
 
-    input   wire [4:0]                    EX_dest,
-    input   wire [4:0]                    MEM_dest,
-    output  wire [4:0]                    WB_dest
+    input   wire [`forwrd_data_width-1:0]  EX_forward,
+    input   wire [`forwrd_data_width-1:0]  MEM_forward,
+    input   wire [`forwrd_data_width-1:0]  WB_forward
 );
 
 reg                            ID_valid;
@@ -99,6 +99,13 @@ wire        no_rkd;
 wire        rj_wait;
 wire        rkd_wait;
 wire        need_wait;
+
+wire [ 4:0] EX_dest;
+wire [ 4:0] MEM_dest;
+wire [ 4:0] WB_dest;
+wire [31:0] EX_forward_value;
+wire [31:0] MEM_forward_value;
+wire [31:0] WB_forward_value;
 //控制阻塞信号
 assign rj_wait  = ~no_rj  && (rf_raddr1 != 5'b0) && (rf_raddr1 == EX_dest || rf_raddr1 == MEM_dest || rf_raddr1 == WB_dest);
 assign rkd_wait = ~no_rkd && (rf_raddr2 != 5'b0) && (rf_raddr2 == EX_dest || rf_raddr2 == MEM_dest || rf_raddr2 == WB_dest);
@@ -226,13 +233,21 @@ assign res_from_mem  = inst_ld_w;
 assign dst_is_r1     = inst_bl;
 assign gr_we         = ~inst_st_w & ~inst_beq & ~inst_bne & ~inst_b;
 assign mem_we        = inst_st_w;
-assign dest          = dst_is_r1 ? 5'd1 : rd;
+assign dest          = (dst_is_r1 ? 5'd1 : rd) & {5{gr_we}}; //若无需写寄存器，将dest清为0，方便前递时判断
 
 assign rf_raddr1 = rj;
 assign rf_raddr2 = src_reg_is_rd ? rd :rk;
 
 
-assign rj_value  = rf_rdata1;
+// assign rj_value  = rj_wait ? (rf_raddr1 == EX_dest ? EX_forward_value :
+//                               rf_raddr1 == MEM_dest ? MEM_forward_value :
+//       /*rf_raddr1 == WB_dest*/WB_forward_value) : rf_rdata1;
+// assign rkd_value = rkd_wait ? (rf_raddr2 == EX_dest ? EX_forward_value :
+//                                rf_raddr2 == MEM_dest ? MEM_forward_value :
+//        /*rf_raddr2 == WB_dest*/WB_forward_value) : rf_rdata2;
+
+
+assign rj_value = rf_rdata1;
 assign rkd_value = rf_rdata2;
 
 assign rj_eq_rd = (rj_value == rkd_value);
@@ -244,5 +259,9 @@ assign br_taken = (   inst_beq  &&  rj_eq_rd
                 ) && ID_valid && ~need_wait; //br_taken会强制置ID_valid为0，当ID需要阻塞时br_taken也不能为1
 assign br_target = (inst_beq || inst_bne || inst_bl || inst_b) ? (pc + br_offs) :
                                                    /*inst_jirl*/ (rj_value + jirl_offs);
+
+assign {EX_dest, EX_forward_value} = EX_forward;
+assign {MEM_dest, MEM_forward_value} = MEM_forward;
+assign {WB_dest, WB_forward_value} = WB_forward;
 
 endmodule

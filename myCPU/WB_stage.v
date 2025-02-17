@@ -17,7 +17,7 @@ module WB_stage(
     output wire  [ 4:0]                   debug_wb_rf_wnum,
     output wire  [31:0]                   debug_wb_rf_wdata,
 
-    output wire  [4:0]                    WB_dest
+    output wire  [`forwrd_data_width-1:0] WB_forward
 );
 
 reg WB_valid;
@@ -28,6 +28,8 @@ wire [31:0] pc;
 wire [4:0] dest;
 wire [31:0] final_result;
 wire        gr_we;
+
+wire [4:0] WB_dest;
 
 assign WB_ready_go = 1'b1;//无阻塞
 assign WB_allow_in = ~WB_valid | WB_ready_go;
@@ -58,5 +60,6 @@ assign debug_wb_rf_wnum  = dest;
 assign debug_wb_rf_wdata = final_result;
 
 assign WB_dest = dest & {5{WB_valid}};
+assign WB_forward = {WB_dest, rf_wdata};
 
 endmodule

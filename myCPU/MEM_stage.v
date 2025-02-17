@@ -13,7 +13,7 @@ module MEM_stage(
     output  wire                          MEM_to_WB_valid,
     output  wire                          MEM_allow_in,
 
-    output  wire [4:0]                    MEM_dest
+    output  wire [`forwrd_data_width-1:0] MEM_forward
 );
 
 reg                           MEM_valid;
@@ -28,6 +28,8 @@ wire        gr_we;
 
 wire [31:0] mem_result;
 wire [31:0] final_result;
+
+wire [4:0]  MEM_dest;
 
 assign MEM_ready_go = 1'b1;//无阻塞
 assign MEM_allow_in = ~MEM_valid | (MEM_ready_go & WB_allow_in);
@@ -59,6 +61,7 @@ assign mem_result   = data_sram_rdata;
 assign final_result = res_from_mem ? mem_result : alu_result;
 
 assign MEM_dest = dest & {5{MEM_valid}};
+assign MEM_forward = {MEM_dest, final_result};
 
 
 endmodule

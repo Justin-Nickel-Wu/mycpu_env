@@ -16,7 +16,7 @@ module EX_stage(
     output  wire [31:0]                   data_sram_addr,
     output  wire [31:0]                   data_sram_wdata,
 
-    output  wire [4:0]                    EX_dest
+    output  wire [`forwrd_data_width-1:0] EX_forward
 );
 
 reg                          EX_valid;
@@ -38,6 +38,8 @@ wire        mem_we;
 wire        res_from_mem;
 wire [4:0]  dest;
 wire        gr_we;
+
+wire [4:0] EX_dest;
 
 assign EX_ready_go = 1'b1;//无阻塞
 assign EX_allow_in = ~EX_valid | (EX_ready_go & MEM_allow_in);
@@ -80,7 +82,8 @@ assign data_sram_we    = {4{mem_we && EX_valid}};
 assign data_sram_addr = alu_result;
 assign data_sram_wdata = rkd_value;
 
-assign EX_dest = dest & {5{EX_valid}};
+assign EX_dest = dest & {5{EX_valid}} & {5{~res_from_mem}};  //如果为读内存指令，此处前递无意义，所以将EX_dest清为0
+assign EX_forward = {EX_dest, alu_result};
 
 /*
 //输出写内存信息
