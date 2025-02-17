@@ -18,7 +18,7 @@ module ID_stage(
     output  wire [4:0]                    rf_raddr2,
     input   wire [31:0]                   rf_rdata2,
 
-    input   wire [`forwrd_data_width-1:0]  EX_forward,
+    input   wire [37:0]                    EX_forward,
     input   wire [`forwrd_data_width-1:0]  MEM_forward,
     input   wire [`forwrd_data_width-1:0]  WB_forward
 );
@@ -106,10 +106,11 @@ wire [ 4:0] WB_dest;
 wire [31:0] EX_forward_value;
 wire [31:0] MEM_forward_value;
 wire [31:0] WB_forward_value;
+wire        is_load;
 //控制阻塞信号
 assign rj_wait  = ~no_rj  && (rf_raddr1 != 5'b0) && (rf_raddr1 == EX_dest || rf_raddr1 == MEM_dest || rf_raddr1 == WB_dest);
 assign rkd_wait = ~no_rkd && (rf_raddr2 != 5'b0) && (rf_raddr2 == EX_dest || rf_raddr2 == MEM_dest || rf_raddr2 == WB_dest);
-assign need_wait = rj_wait || rkd_wait;
+assign need_wait = rj_wait || rkd_wait || is_load;
 assign ID_ready_go = ~need_wait || ~ID_valid;
 assign ID_allow_in = ~ID_valid | (ID_ready_go & EX_allow_in);
 assign ID_to_EX_valid = ID_valid & ID_ready_go;
@@ -239,16 +240,12 @@ assign rf_raddr1 = rj;
 assign rf_raddr2 = src_reg_is_rd ? rd :rk;
 
 
-// assign rj_value  = rj_wait ? (rf_raddr1 == EX_dest ? EX_forward_value :
-//                               rf_raddr1 == MEM_dest ? MEM_forward_value :
-//       /*rf_raddr1 == WB_dest*/WB_forward_value) : rf_rdata1;
-// assign rkd_value = rkd_wait ? (rf_raddr2 == EX_dest ? EX_forward_value :
-//                                rf_raddr2 == MEM_dest ? MEM_forward_value :
-//        /*rf_raddr2 == WB_dest*/WB_forward_value) : rf_rdata2;
-
-
-assign rj_value = rf_rdata1;
-assign rkd_value = rf_rdata2;
+assign rj_value  = rj_wait ? (rf_raddr1 == EX_dest ? EX_forward_value :
+                              rf_raddr1 == MEM_dest ? MEM_forward_value :
+      /*rf_raddr1 == WB_dest*/WB_forward_value) : rf_rdata1;
+assign rkd_value = rkd_wait ? (rf_raddr2 == EX_dest ? EX_forward_value :
+                               rf_raddr2 == MEM_dest ? MEM_forward_value :
+       /*rf_raddr2 == WB_dest*/WB_forward_value) : rf_rdata2;
 
 assign rj_eq_rd = (rj_value == rkd_value);
 assign br_taken = (   inst_beq  &&  rj_eq_rd
@@ -260,7 +257,7 @@ assign br_taken = (   inst_beq  &&  rj_eq_rd
 assign br_target = (inst_beq || inst_bne || inst_bl || inst_b) ? (pc + br_offs) :
                                                    /*inst_jirl*/ (rj_value + jirl_offs);
 
-assign {EX_dest, EX_forward_value} = EX_forward;
+assign {EX_dest, EX_forward_value, is_load} = EX_forward;
 assign {MEM_dest, MEM_forward_value} = MEM_forward;
 assign {WB_dest, WB_forward_value} = WB_forward;
 

@@ -49,7 +49,7 @@ wire         rf_we;
 wire [ 4:0]  rf_waddr;
 wire [31:0]  rf_wdata;
 
-wire [`forwrd_data_width-1:0]  EX_forward;
+wire [37:0]                    EX_forward;
 wire [`forwrd_data_width-1:0]  MEM_forward;
 wire [`forwrd_data_width-1:0]  WB_forward;
 
