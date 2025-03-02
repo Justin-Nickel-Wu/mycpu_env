@@ -2,7 +2,7 @@ module alu(
   input  wire        clk,
   input  wire        reset,
 
-  input  wire [16:0] alu_op,
+  input  wire [18:0] alu_op,
   input  wire [31:0] alu_src1,
   input  wire [31:0] alu_src2,
   output wire [31:0] alu_result,
@@ -27,6 +27,8 @@ wire op_mulh_w;
 wire op_mulh_wu;
 wire op_div_w;
 wire op_mod_w;
+wire op_div_wu;
+wire op_mod_wu;
 
 // control code decomposition
 assign op_add  = alu_op[ 0];
@@ -46,6 +48,8 @@ assign op_mulh_w  = alu_op[13];
 assign op_mulh_wu = alu_op[14];
 assign op_div_w   = alu_op[15];
 assign op_mod_w   = alu_op[16];
+assign op_div_wu  = alu_op[17];
+assign op_mod_wu  = alu_op[18];
 
 wire [31:0] add_sub_result;
 wire [31:0] slt_result;
@@ -67,7 +71,7 @@ wire        adder_cin;
 wire [31:0] adder_result;
 wire        adder_cout;
 
-assign alu_wait = signed_div_wait;
+assign alu_wait = signed_div_wait || unsigned_div_wait;
 
 assign adder_a   = alu_src1;
 assign adder_b   = (op_sub | op_slt | op_sltu) ? ~alu_src2 : alu_src2;  //src1 - src2 rj-rk
@@ -107,9 +111,9 @@ wire [65:0] mul_result;
 
 assign muler_a = op_mulh_w ? {alu_src1[31], alu_src1} :
          /*mul_w | mulh_wu*/ {{1'b0}, alu_src1};
-assign muler_b = op_mulh_wu ? {alu_src2[31], alu_src2} :
-         /*mul_w | mulh_w*/ {{1'b0}, alu_src2};
-assign mur_result = $signed(muler_a) * $signed(muler_b);
+assign muler_b = op_mulh_w ? {alu_src2[31], alu_src2} :
+         /*mul_w | mulh_wu*/ {{1'b0}, alu_src2};
+assign mul_result = $signed(muler_a) * $signed(muler_b);
 
 //DIV result
 wire        signed_dividend_tready;
@@ -123,11 +127,25 @@ wire 		is_signed_div;
 wire		signed_div_wait;
 reg  [ 1:0] signed_div_state;
 
+wire        unsigned_dividend_tready;
+reg         unsigned_dividend_tvalid;
+wire        unsigned_divisor_tready;
+reg         unsigned_divisor_tvalid;
+wire [63:0]	unsigned_div_tdata;
+wire 		unsigned_div_tvalid;
+wire 		is_unsigned_div;
+
+wire		unsigned_div_wait;
+reg  [ 1:0] unsigned_div_state;
+
 localparam IDLE = 0,
            SEND_DATA = 1,
            WAIT_FOR_RESULT = 2;
 
 assign is_signed_div = op_div_w || op_mod_w;
+assign is_unsigned_div = op_div_wu || op_mod_wu;
+assign signed_div_wait = is_signed_div && (~signed_div_tvalid);
+assign unsigned_div_wait = is_unsigned_div && (~unsigned_div_tvalid);
 
 always @(posedge clk) begin
 	if (reset) begin
@@ -159,7 +177,35 @@ always @(posedge clk) begin
 	end
 end
 
-assign signed_div_wait = is_signed_div && (~signed_div_tvalid);
+always @(posedge clk) begin
+	if (reset) begin
+		unsigned_div_state <= IDLE;
+		unsigned_dividend_tvalid <= 1'b0;
+		unsigned_divisor_tvalid <= 1'b0;
+	end else begin
+		case (unsigned_div_state) 
+			IDLE: begin
+				if (is_unsigned_div) begin
+					unsigned_dividend_tvalid <= 1'b1;
+					unsigned_divisor_tvalid <= 1'b1;
+					unsigned_div_state <= SEND_DATA;
+				end
+			end
+			SEND_DATA: begin
+				if (unsigned_dividend_tready && unsigned_divisor_tready) begin
+					unsigned_dividend_tvalid <= 1'b0;
+					unsigned_divisor_tvalid <= 1'b0;
+					unsigned_div_state <= WAIT_FOR_RESULT;
+				end
+			end
+			WAIT_FOR_RESULT: begin
+				if (unsigned_div_tvalid) begin
+					unsigned_div_state <= IDLE;
+				end
+			end
+		endcase
+	end
+end
 
 signed_div u_signed_div(
 	.aclk                     (clk),
@@ -176,6 +222,21 @@ signed_div u_signed_div(
 	.m_axis_dout_tvalid       (signed_div_tvalid)
 );
 
+unsigned_div u_unsigned_div(
+	.aclk                     (clk),
+
+	.s_axis_dividend_tdata    (alu_src1),
+	.s_axis_dividend_tready   (unsigned_dividend_tready),
+	.s_axis_dividend_tvalid   (unsigned_dividend_tvalid),
+
+	.s_axis_divisor_tdata     (alu_src2),
+	.s_axis_divisor_tready    (unsigned_divisor_tready),
+	.s_axis_divisor_tvalid    (unsigned_divisor_tvalid),
+
+	.m_axis_dout_tdata        (unsigned_div_tdata),
+	.m_axis_dout_tvalid       (unsigned_div_tvalid)
+);
+
 // final result mux
 assign alu_result = op_add | op_sub ? add_sub_result  :
                     op_slt          ? slt_result      :
@@ -190,5 +251,7 @@ assign alu_result = op_add | op_sub ? add_sub_result  :
                     op_mul_w               ? mul_result[31: 0]:
                     op_mulh_w | op_mulh_wu ? mul_result[63:32]:
 					op_div_w		? signed_div_tdata[63:32] :
-					op_mod_w		? signed_div_tdata[31: 0] : 32'b0;
+					op_mod_w		? signed_div_tdata[31: 0] : 
+					op_div_wu       ? unsigned_div_tdata[63:32]:
+					op_mod_wu       ? unsigned_div_tdata[31: 0]: 32'b0;
 endmodule

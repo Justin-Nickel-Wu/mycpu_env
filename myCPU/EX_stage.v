@@ -31,7 +31,7 @@ wire [31:0] pc;
 wire [31:0] rj_value;
 wire [31:0] rkd_value;
 wire [31:0] imm;
-wire [16:0] alu_op;
+wire [18:0] alu_op;
 wire        src1_is_pc;
 wire        src2_is_imm;
 wire        mem_we;
