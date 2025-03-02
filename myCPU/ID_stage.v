@@ -33,7 +33,7 @@ wire [31:0] br_target;
 wire [31:0] inst;
 wire [31:0] pc;
 
-wire [14:0] alu_op;
+wire [16:0] alu_op;
 wire        load_op;
 wire        src1_is_pc;
 wire        src2_is_imm;
@@ -80,6 +80,8 @@ wire        inst_sra_w;
 wire        inst_mul_w;
 wire        inst_mulh_w;
 wire        inst_mulh_wu;
+wire        inst_div_w;
+wire        inst_mod_w;
 wire        inst_slli_w;
 wire        inst_srli_w;
 wire        inst_srai_w;
@@ -189,6 +191,8 @@ assign inst_sra_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & o
 assign inst_mul_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h18];
 assign inst_mulh_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h19];
 assign inst_mulh_wu= op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h1a];
+assign inst_div_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h00];
+assign inst_mod_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h01];
 assign inst_slli_w = op_31_26_d[6'h00] & op_25_22_d[4'h1] & op_21_20_d[2'h0] & op_19_15_d[5'h01];
 assign inst_srli_w = op_31_26_d[6'h00] & op_25_22_d[4'h1] & op_21_20_d[2'h0] & op_19_15_d[5'h09];
 assign inst_srai_w = op_31_26_d[6'h00] & op_25_22_d[4'h1] & op_21_20_d[2'h0] & op_19_15_d[5'h11];
@@ -225,6 +229,8 @@ assign alu_op[11] = inst_lu12i_w;
 assign alu_op[12] = inst_mul_w;
 assign alu_op[13] = inst_mulh_w;
 assign alu_op[14] = inst_mulh_wu;
+assign alu_op[15] = inst_div_w;
+assign alu_op[16] = inst_mod_w;
 
 assign need_ui5   =  inst_slli_w | inst_srli_w | inst_srai_w;
 assign need_si12  =  inst_addi_w | inst_ld_w | inst_st_w | inst_slti | inst_sltui;

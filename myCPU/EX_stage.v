@@ -31,7 +31,7 @@ wire [31:0] pc;
 wire [31:0] rj_value;
 wire [31:0] rkd_value;
 wire [31:0] imm;
-wire [14:0] alu_op;
+wire [16:0] alu_op;
 wire        src1_is_pc;
 wire        src2_is_imm;
 wire        mem_we;
@@ -41,8 +41,9 @@ wire        gr_we;
 
 wire [4:0] EX_dest;
 wire       is_load;
+wire       alu_wait;
 
-assign EX_ready_go = 1'b1;//无阻塞
+assign EX_ready_go = ~EX_valid || ~alu_wait;
 assign EX_allow_in = ~EX_valid | (EX_ready_go & MEM_allow_in);
 assign EX_to_MEM_valid = EX_valid & EX_ready_go;
 
@@ -98,10 +99,13 @@ end
 */
 
 alu u_alu(
+    .clk        (clk       ),
+    .reset      (reset     ),
     .alu_op     (alu_op    ),
     .alu_src1   (alu_src1  ),
     .alu_src2   (alu_src2  ),
-    .alu_result (alu_result)
+    .alu_result (alu_result),
+    .alu_wait   (alu_wait  )
 );
 
 endmodule
