@@ -6,3 +6,6 @@
 /soc_verify/soc_bram/rtl/*
 !/soc_verify/soc_bram/rtl/soc_lite_top.v
 /soc_verify/soc_bram/run_vivado/project/*
+
+/.vscode
+/.vscode/*
