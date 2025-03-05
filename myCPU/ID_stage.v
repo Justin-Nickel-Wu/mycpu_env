@@ -310,8 +310,8 @@ assign rkd_value = rkd_wait ? (rf_raddr2 == EX_dest ? EX_forward_value :
        /*rf_raddr2 == WB_dest*/WB_forward_value) : rf_rdata2;
 
 assign rj_eq_rd = (rj_value == rkd_value);
-assign rj_lt_rd = (rj_value < rkd_value);
-assign rj_ult_rd = ($unsigned(rj_value) < $unsigned(rkd_value));
+assign rj_lt_rd = $signed(rj_value) < $signed(rkd_value);
+assign rj_ult_rd = $unsigned(rj_value) < $unsigned(rkd_value);
 assign br_taken = (   inst_beq  &&  rj_eq_rd
                    || inst_bne  && !rj_eq_rd
                    || inst_blt  &&  rj_lt_rd
