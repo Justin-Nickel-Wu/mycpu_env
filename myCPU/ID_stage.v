@@ -44,7 +44,6 @@ wire        src2_is_imm;
 wire        res_from_mem;
 wire        dst_is_r1;
 wire        gr_we;
-wire        mem_we;
 wire        src_reg_is_rd;
 wire [4: 0] dest;
 wire [31:0] rj_value;
@@ -97,8 +96,14 @@ wire        inst_addi_w;
 wire        inst_andi;
 wire        inst_ori;
 wire        inst_xori;
+wire        inst_ld_b;
+wire        inst_ld_h;
 wire        inst_ld_w;
+wire        inst_st_b;
+wire        inst_st_h;
 wire        inst_st_w;
+wire        inst_ld_bu;
+wire        inst_ld_hu;
 wire        inst_jirl;
 wire        inst_b;
 wire        inst_bl;
@@ -125,6 +130,14 @@ wire        rj_wait;
 wire        rkd_wait;
 wire        need_wait;
 
+wire        read_mem_1_byte;
+wire        read_mem_2_byte;
+wire        read_mem_4_byte;
+wire        read_mem_is_signed;
+wire        write_mem_1_byte;
+wire        write_mem_2_byte;
+wire        write_mem_4_byte;
+
 wire [ 4:0] EX_dest;
 wire [ 4:0] MEM_dest;
 wire [ 4:0] WB_dest;
@@ -146,7 +159,7 @@ always @(posedge clk) begin
         ID_valid <= 1'b0;
     else if (br_taken)
         ID_valid <= 1'b0;
-    else if (ID_ready_go)
+    else if (ID_allow_in)
         ID_valid <= IF_to_ID_valid;
 
     if (IF_to_ID_valid && ID_allow_in)
@@ -154,17 +167,22 @@ always @(posedge clk) begin
 end
 
 assign {pc, inst} = to_ID_data_r;
-assign to_EX_data ={pc, //32
-                    rj_value, //32
-                    rkd_value, //32
-                    imm, //32
-                    alu_op, //15
-                    src1_is_pc, //1
-                    src2_is_imm, //1
-                    mem_we, //1
-                    res_from_mem, //1
-                    dest, //5
-                    gr_we //1
+assign to_EX_data ={pc,
+                    rj_value,
+                    rkd_value,
+                    imm,
+                    alu_op,
+                    src1_is_pc,
+                    src2_is_imm,
+                    read_mem_1_byte,
+                    read_mem_2_byte,
+                    read_mem_4_byte,
+                    read_mem_is_signed,
+                    write_mem_1_byte,
+                    write_mem_2_byte,
+                    write_mem_4_byte,
+                    dest,
+                    gr_we
                     };
 assign br_data = {br_taken, br_target};
 
@@ -214,8 +232,14 @@ assign inst_addi_w = op_31_26_d[6'h00] & op_25_22_d[4'ha];
 assign inst_andi   = op_31_26_d[6'h00] & op_25_22_d[4'hd];
 assign inst_ori    = op_31_26_d[6'h00] & op_25_22_d[4'he];
 assign inst_xori   = op_31_26_d[6'h00] & op_25_22_d[4'hf];
+assign inst_ld_b   = op_31_26_d[6'h0a] & op_25_22_d[4'h0];
+assign inst_ld_h   = op_31_26_d[6'h0a] & op_25_22_d[4'h1];
 assign inst_ld_w   = op_31_26_d[6'h0a] & op_25_22_d[4'h2];
+assign inst_st_b   = op_31_26_d[6'h0a] & op_25_22_d[4'h4];
+assign inst_st_h   = op_31_26_d[6'h0a] & op_25_22_d[4'h5];
 assign inst_st_w   = op_31_26_d[6'h0a] & op_25_22_d[4'h6];
+assign inst_ld_bu  = op_31_26_d[6'h0a] & op_25_22_d[4'h8];
+assign inst_ld_hu  = op_31_26_d[6'h0a] & op_25_22_d[4'h9];
 assign inst_jirl   = op_31_26_d[6'h13];
 assign inst_b      = op_31_26_d[6'h14];
 assign inst_bl     = op_31_26_d[6'h15];
@@ -229,8 +253,9 @@ assign inst_lu12i_w= op_31_26_d[6'h05] & ~inst[25];
 assign inst_pcaddu12i
                    = op_31_26_d[6'h07] & ~inst[25];
 
-assign alu_op[ 0] = inst_add_w | inst_addi_w | inst_ld_w | inst_st_w
-                    | inst_jirl | inst_bl |inst_pcaddu12i;
+assign alu_op[ 0] = inst_add_w | inst_addi_w |
+                    inst_ld_b | inst_ld_h | inst_ld_w | inst_st_b | inst_st_h | inst_st_w | inst_ld_bu | inst_ld_hu |
+                    inst_jirl | inst_bl | inst_pcaddu12i;
 assign alu_op[ 1] = inst_sub_w;
 assign alu_op[ 2] = inst_slt | inst_slti;
 assign alu_op[ 3] = inst_sltu | inst_sltui;
@@ -251,20 +276,23 @@ assign alu_op[17] = inst_div_wu;
 assign alu_op[18] = inst_mod_wu;
 
 assign need_ui5   =  inst_slli_w | inst_srli_w | inst_srai_w;
-assign need_si12  =  inst_addi_w | inst_ld_w | inst_st_w | inst_slti | inst_sltui;
+assign need_si12  =  inst_addi_w | inst_ld_b | inst_ld_h  | inst_ld_w  | inst_st_b 
+                   | inst_st_h   | inst_st_w | inst_ld_bu | inst_ld_hu | inst_slti 
+                   | inst_sltui;
 assign need_ui12  =  inst_andi | inst_ori | inst_xori;
 assign need_si16  =  inst_jirl | inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu;
 assign need_si20  =  inst_lu12i_w | inst_pcaddu12i;
 assign need_si26  =  inst_b | inst_bl;
 assign src2_is_4  =  inst_jirl | inst_bl;
 assign no_rj      =  inst_lu12i_w | inst_b | inst_bl | inst_pcaddu12i;
-assign no_rkd     =  inst_slli_w | inst_srli_w | inst_srai_w 
-                    | inst_slti | inst_sltui | inst_addi_w  | inst_andi | inst_ori | inst_xori
-                    | inst_lu12i_w | inst_pcaddu12i | inst_ld_w | inst_jirl | inst_b | inst_bl;
+assign no_rkd     =  inst_slli_w | inst_srli_w | inst_srai_w | inst_slti | inst_sltui   |
+                     inst_addi_w | inst_andi   | inst_ori    | inst_xori | inst_lu12i_w | inst_pcaddu12i |
+                     inst_ld_b   | inst_ld_h   | inst_ld_w   | inst_ld_bu| inst_ld_hu   |
+                     inst_jirl   | inst_b      | inst_bl;
 
 assign imm = src2_is_4 ? 32'h4                      :
              need_si20 ? {i20[19:0], 12'b0}         :
-             need_ui12 ? {{20{1'b0}}, i12[11:0]}      :
+             need_ui12 ? {{20{1'b0}}, i12[11:0]}    :
 /*need_ui5 || need_si12*/{{20{i12[11]}}, i12[11:0]} ;
 
 assign br_offs = need_si26 ? {{ 4{i26[25]}}, i26[25:0], 2'b0} :
@@ -272,7 +300,8 @@ assign br_offs = need_si26 ? {{ 4{i26[25]}}, i26[25:0], 2'b0} :
 
 assign jirl_offs = {{14{i16[15]}}, i16[15:0], 2'b0};
 
-assign src_reg_is_rd = inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu | inst_st_w;
+assign src_reg_is_rd = inst_beq  | inst_bne  | inst_blt | inst_bge | inst_bltu | inst_bgeu |
+                       inst_st_b | inst_st_h | inst_st_w;
 
 assign src1_is_pc    = inst_jirl | inst_bl | inst_pcaddu12i;
 
@@ -285,18 +314,26 @@ assign src2_is_imm   = inst_slli_w |
                        inst_andi   |
                        inst_ori    |
                        inst_xori   |
-                       inst_ld_w   |
-                       inst_st_w   |
+                       inst_ld_b   | inst_ld_h  | inst_ld_w |
+                       inst_st_b   | inst_st_h  | inst_st_w |
+                       inst_ld_bu  | inst_ld_hu |
                        inst_lu12i_w|
                        inst_pcaddu12i |
                        inst_jirl   |
                        inst_bl     ;
 
-assign res_from_mem  = inst_ld_w;
 assign dst_is_r1     = inst_bl;
-assign gr_we         = ~inst_st_w & ~inst_b & ~inst_beq & ~inst_bne & ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu;
-assign mem_we        = inst_st_w;
+assign gr_we         = ~inst_st_b & ~inst_st_h &~inst_st_w & 
+                       ~inst_b & ~inst_beq & ~inst_bne & ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu;
 assign dest          = (dst_is_r1 ? 5'd1 : rd) & {5{gr_we}}; //若无需写寄存器，将dest清为0，方便前递时判断
+
+assign read_mem_1_byte    = inst_ld_b | inst_ld_bu;
+assign read_mem_2_byte    = inst_ld_h | inst_ld_hu;
+assign read_mem_4_byte    = inst_ld_w;
+assign read_mem_is_signed = inst_ld_b | inst_ld_h | inst_ld_w;
+assign write_mem_1_byte   = inst_st_b;
+assign write_mem_2_byte   = inst_st_h;
+assign write_mem_4_byte   = inst_st_w;
 
 assign rf_raddr1 = rj;
 assign rf_raddr2 = src_reg_is_rd ? rd :rk;

@@ -34,10 +34,17 @@ wire [31:0] imm;
 wire [18:0] alu_op;
 wire        src1_is_pc;
 wire        src2_is_imm;
-wire        mem_we;
-wire        res_from_mem;
 wire [4:0]  dest;
 wire        gr_we;
+
+wire        read_mem_1_byte;
+wire        read_mem_2_byte;
+wire        read_mem_4_byte;
+wire        read_mem_is_signed;
+wire        write_mem_1_byte;
+wire        write_mem_2_byte;
+wire        write_mem_4_byte;
+wire [1:0]  write_mem_addr;
 
 wire [4:0] EX_dest;
 wire       is_load;
@@ -50,7 +57,7 @@ assign EX_to_MEM_valid = EX_valid & EX_ready_go;
 always @(posedge clk) begin
     if (reset)
         EX_valid <= 1'b0;
-    else if (EX_ready_go)
+    else if (EX_allow_in)
         EX_valid <= ID_to_EX_valid;
 
     if (ID_to_EX_valid && EX_allow_in)
@@ -64,30 +71,46 @@ assign {pc,
         alu_op,
         src1_is_pc,
         src2_is_imm,
-        mem_we,
-        res_from_mem,
+        read_mem_1_byte,
+        read_mem_2_byte,
+        read_mem_4_byte,
+        read_mem_is_signed,
+        write_mem_1_byte,
+        write_mem_2_byte,
+        write_mem_4_byte,
         dest,
         gr_we} = to_EX_data_r;
 
-assign to_MEM_data = {pc, //32
-                      alu_result, //32
-                      res_from_mem,//1
-                      dest, //5
-                      gr_we //1
+assign to_MEM_data = {pc,
+                      alu_result,
+                      read_mem_1_byte,
+                      read_mem_2_byte,
+                      read_mem_4_byte,
+                      read_mem_is_signed,
+                      dest,
+                      gr_we
                     };
 
 assign alu_src1 = src1_is_pc  ? pc[31:0] : rj_value;
 assign alu_src2 = src2_is_imm ? imm : rkd_value;
 
-assign data_sram_en    = 1'b1;
-assign data_sram_we    = {4{mem_we && EX_valid}};
-assign data_sram_addr = alu_result;
-assign data_sram_wdata = rkd_value;
+assign write_mem_addr = alu_result[1:0];
+
+assign data_sram_we = write_mem_1_byte ? (write_mem_addr == 2'b00 ? 4'b0001 :
+                                          write_mem_addr == 2'b01 ? 4'b0010 :
+                                          write_mem_addr == 2'b10 ? 4'b0100 : 4'b1000) :
+                      write_mem_2_byte ? (write_mem_addr == 2'b00 ? 4'b0011 : 4'b1100) :
+                      write_mem_4_byte ? 4'b1111 : 4'b0000;
+assign data_sram_wdata = write_mem_1_byte ? {4{rkd_value[ 7: 0]}} :
+                         write_mem_2_byte ? {2{rkd_value[15: 0]}} :
+                    /* write_mem_4_byte */  rkd_value;
+assign data_sram_en    = EX_valid;
+assign data_sram_addr  = {alu_result[31:2], 2'b00};
 
 //assign EX_dest = dest & {5{EX_valid}} & {5{~res_from_mem}};  //如果为读内存指令，此处前递无意义，所以将EX_dest清为0
 //错误写法：如果是一条load指令，他处于EX阶段时仍然需要返回写寄存器号信息来让ID阶段的指令阻塞。若直接清EX_dest为0，则失去了这个信息
 assign EX_dest = dest & {5{EX_valid}};
-assign is_load = res_from_mem & EX_valid;
+assign is_load = EX_valid & (read_mem_1_byte | read_mem_2_byte | read_mem_4_byte);
 assign EX_forward = {EX_dest, alu_result, is_load};
 
 /*

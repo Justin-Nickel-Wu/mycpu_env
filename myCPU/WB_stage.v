@@ -37,7 +37,7 @@ assign WB_allow_in = ~WB_valid | WB_ready_go;
 always @(posedge clk) begin
     if (reset)
         WB_valid <= 1'b0;
-    else if (WB_ready_go)
+    else if (WB_allow_in)
         WB_valid <= MEM_to_WB_valid;
 
     if (MEM_to_WB_valid && WB_allow_in)
