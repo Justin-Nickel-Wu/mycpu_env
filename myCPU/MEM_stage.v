@@ -1,4 +1,4 @@
-`include "constants.h"
+`include "myCPU/constants.h"
 
 module MEM_stage(
     input   wire                          clk,

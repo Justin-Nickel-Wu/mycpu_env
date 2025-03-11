@@ -1,4 +1,4 @@
-`include "constants.h"
+`include "myCPU/constants.h"
 
 module IF_stage(
     input   wire                        clk,
