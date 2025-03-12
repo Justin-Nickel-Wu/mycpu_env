@@ -1,4 +1,10 @@
-`include "myCPU/constants.h"
+`ifdef XILINX_SIMULATOR
+  `include "constants.h"
+`elsif XILINX_SYNTHESIS
+  `include "constants.h"
+`else
+ `include "myCPU/constants.h"
+`endif
 
 module EX_stage(
     input   wire                          clk,
