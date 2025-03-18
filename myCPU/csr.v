@@ -1,10 +1,4 @@
-`ifdef XILINX_SIMULATOR
-  `include "constants.h"
-`elsif XILINX_SYNTHESIS
-  `include "constants.h"
-`else
- `include "myCPU/constants.h"
-`endif
+`include "constants.h"
 
 module CSR_module(
     input  wire                       clk,
@@ -25,6 +19,40 @@ module CSR_module(
     input  wire                [ 8:0] wb_esubcode
 );
 
+
+//CRMD
+reg  [ 1:0] csr_crmd_plv;
+reg         csr_crmd_ie;
+wire        csr_crmd_da;
+wire        csr_crmd_pg;
+wire [ 1:0] csr_crmd_datf;
+wire [ 1:0] csr_crmd_datm;
+wire [31:0] csr_crmd;
+//PRMD
+reg  [ 1:0] csr_prmd_pplv;
+reg         csr_prmd_pie;
+wire [31:0] csr_prmd;
+//ESTAT
+reg  [12:0] csr_estat_is;
+reg  [ 5:0] csr_estat_ecode;
+reg  [ 8:0] csr_estat_esubcode;
+wire [31:0] csr_estat;
+//ERA
+reg  [31:0] csr_era_pc;
+wire [31:0] csr_era;
+//EENTRY
+reg  [25:0] csr_eentry_va;
+wire [31:0] csr_eentry;
+//SAVE
+reg  [31:0] csr_save0_data;
+reg  [31:0] csr_save1_data;
+reg  [31:0] csr_save2_data;
+reg  [31:0] csr_save3_data;
+wire [31:0] csr_save0;
+wire [31:0] csr_save1;
+wire [31:0] csr_save2;
+wire [31:0] csr_save3;
+
 assign csr_rvalue = ~csr_re                ? 32'b0      :
                     csr_num == `CSR_CRMD   ? csr_crmd   :
                     csr_num == `CSR_PRMD   ? csr_prmd   :
@@ -39,13 +67,6 @@ assign ex_entry = csr_eentry;
 
 /*-----------------------------*/
 /*CRMD*/
-reg  [ 1:0] csr_crmd_plv;
-reg         csr_crmd_ie;
-wire        csr_crmd_da;
-wire        csr_crmd_pg;
-wire [ 1:0] csr_crmd_datf;
-wire [ 1:0] csr_crmd_datm;
-wire [31:0] csr_crmd;
 
 assign csr_crmd = {23'b0, csr_crmd_datm, csr_crmd_datf, csr_crmd_pg, csr_crmd_da, csr_crmd_ie, csr_crmd_plv};
 
@@ -81,9 +102,6 @@ assign csr_crmd_datm = 2'b00;
 
 /*-----------------------------*/
 /*PRMD*/
-reg  [ 1:0] csr_prmd_pplv;
-reg         csr_prmd_pie;
-wire [31:0] csr_prmd;
 
 assign csr_prmd = {29'b0, csr_prmd_pie, csr_prmd_pplv};
 
@@ -103,10 +121,6 @@ end
 
 /*-----------------------------*/
 /*ESTAT*/
-reg  [12:0] csr_estat_is;
-reg  [ 5:0] csr_estat_ecode;
-reg  [ 8:0] csr_estat_esubcode;
-wire [31:0] csr_estat;
 
 assign csr_estat = {1'b0, wb_esubcode, wb_ecode, 3'b0, csr_estat_is};
 
@@ -140,8 +154,6 @@ end
 
 /*-----------------------------*/
 /*ERA*/
-reg  [31:0] csr_era_pc;
-wire [31:0] csr_era;
 
 assign csr_era = csr_era_pc;
 
@@ -156,8 +168,6 @@ end
 
 /*-----------------------------*/
 /*EENTRY*/
-reg  [25:0] csr_eentry_va;
-wire [31:0] csr_eentry;
 
 assign csr_eentry = {csr_eentry_va, 6'b0};
 //VA
@@ -169,14 +179,6 @@ end
 
 /*-----------------------------*/
 /*SAVE*/
-reg  [31:0] csr_save0_data;
-reg  [31:0] csr_save1_data;
-reg  [31:0] csr_save2_data;
-reg  [31:0] csr_save3_data;
-wire [31:0] csr_save0;
-wire [31:0] csr_save1;
-wire [31:0] csr_save2;
-wire [31:0] csr_save3;
 
 assign csr_save0 = csr_save0_data;
 assign csr_save1 = csr_save1_data;
