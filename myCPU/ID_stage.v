@@ -4,7 +4,7 @@ module ID_stage(
     input   wire                          clk,
     input   wire                          reset,
 
-    input   wire                          wb_ex,
+    input   wire                          csr_reset,
 
     input   wire                          IF_to_ID_valid,             
     input   wire                          EX_allow_in,
@@ -58,6 +58,7 @@ wire [ 5:0] op_31_26;
 wire [ 3:0] op_25_22;
 wire [ 1:0] op_21_20;
 wire [ 4:0] op_19_15;
+wire [ 4:0] op_14_10;
 wire [ 4:0] rd;
 wire [ 4:0] rj;
 wire [ 4:0] rk;
@@ -70,6 +71,7 @@ wire [63:0] op_31_26_d;
 wire [15:0] op_25_22_d;
 wire [ 3:0] op_21_20_d;
 wire [31:0] op_19_15_d;
+wire [31:0] op_14_10_d;
 
 wire        inst_add_w;
 wire        inst_sub_w;
@@ -99,6 +101,7 @@ wire        inst_addi_w;
 wire        inst_andi;
 wire        inst_ori;
 wire        inst_xori;
+wire        inst_ertn;
 wire        inst_ld_b;
 wire        inst_ld_h;
 wire        inst_ld_w;
@@ -141,6 +144,7 @@ wire        write_mem_1_byte;
 wire        write_mem_2_byte;
 wire        write_mem_4_byte;
 wire        ex_SYS;
+wire        is_ertn;
 
 wire [ 4:0] EX_dest;
 wire [ 4:0] MEM_dest;
@@ -160,7 +164,7 @@ assign ID_to_EX_valid = ID_valid & ID_ready_go;
 //assign to_IF_valid = ID_valid;
 
 always @(posedge clk) begin
-    if (reset | wb_ex)
+    if (reset | csr_reset)
         ID_valid <= 1'b0;
     else if (br_taken)
         ID_valid <= 1'b0;
@@ -188,7 +192,8 @@ assign to_EX_data ={pc,
                     write_mem_4_byte,
                     dest,
                     gr_we,
-                    ex_SYS
+                    ex_SYS,
+                    is_ertn
                     };
 assign br_data = {br_taken, br_target};
 
@@ -196,6 +201,7 @@ assign op_31_26  = inst[31:26];
 assign op_25_22  = inst[25:22];
 assign op_21_20  = inst[21:20];
 assign op_19_15  = inst[19:15];
+assign op_14_10  = inst[14:10];
 
 assign rd   = inst[ 4: 0];
 assign rj   = inst[ 9: 5];
@@ -210,6 +216,7 @@ decoder_6_64 u_dec0(.in(op_31_26 ), .out(op_31_26_d ));
 decoder_4_16 u_dec1(.in(op_25_22 ), .out(op_25_22_d ));
 decoder_2_4  u_dec2(.in(op_21_20 ), .out(op_21_20_d ));
 decoder_5_32 u_dec3(.in(op_19_15 ), .out(op_19_15_d ));
+decoder_5_32 u_dec4(.in(op_14_10 ), .out(op_14_10_d ));
 
 assign inst_add_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h00];
 assign inst_sub_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h02];
@@ -239,6 +246,7 @@ assign inst_addi_w = op_31_26_d[6'h00] & op_25_22_d[4'ha];
 assign inst_andi   = op_31_26_d[6'h00] & op_25_22_d[4'hd];
 assign inst_ori    = op_31_26_d[6'h00] & op_25_22_d[4'he];
 assign inst_xori   = op_31_26_d[6'h00] & op_25_22_d[4'hf];
+assign inst_ertn   = op_31_26_d[6'h01] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & op_14_10_d[5'h0e];
 assign inst_ld_b   = op_31_26_d[6'h0a] & op_25_22_d[4'h0];
 assign inst_ld_h   = op_31_26_d[6'h0a] & op_25_22_d[4'h1];
 assign inst_ld_w   = op_31_26_d[6'h0a] & op_25_22_d[4'h2];
@@ -291,12 +299,15 @@ assign need_si16  =  inst_jirl | inst_beq | inst_bne | inst_blt | inst_bge | ins
 assign need_si20  =  inst_lu12i_w | inst_pcaddu12i;
 assign need_si26  =  inst_b | inst_bl;
 assign src2_is_4  =  inst_jirl | inst_bl;
-assign no_rj      =  inst_lu12i_w | inst_b | inst_bl | inst_pcaddu12i | inst_syscall;
+assign no_rj      =  inst_lu12i_w | inst_b | inst_bl | inst_pcaddu12i | 
+                     inst_syscall | inst_ertn;
 assign no_rkd     =  inst_slli_w | inst_srli_w | inst_srai_w | inst_slti | inst_sltui   |
                      inst_addi_w | inst_andi   | inst_ori    | inst_xori | inst_lu12i_w | inst_pcaddu12i |
                      inst_ld_b   | inst_ld_h   | inst_ld_w   | inst_ld_bu| inst_ld_hu   |
-                     inst_jirl   | inst_b      | inst_bl     | inst_syscall;
+                     inst_jirl   | inst_b      | inst_bl     | 
+                     inst_syscall| inst_ertn;
 assign ex_SYS     =  inst_syscall;
+assign is_ertn    =  inst_ertn;
 
 assign imm = src2_is_4 ? 32'h4                      :
              need_si20 ? {i20[19:0], 12'b0}         :
@@ -333,7 +344,7 @@ assign src2_is_imm   = inst_slli_w |
 assign dst_is_r1     = inst_bl;
 assign gr_we         = ~inst_st_b & ~inst_st_h &~inst_st_w & 
                        ~inst_b & ~inst_beq & ~inst_bne & ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu &
-                       ~inst_syscall;
+                       ~inst_syscall & ~inst_ertn;
 assign dest          = (dst_is_r1 ? 5'd1 : rd) & {5{gr_we}}; //若无需写寄存器，将dest清为0，方便前递时判断
 
 assign read_mem_1_byte    = inst_ld_b | inst_ld_bu;

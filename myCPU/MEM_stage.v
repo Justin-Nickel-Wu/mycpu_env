@@ -4,7 +4,7 @@ module MEM_stage(
     input   wire                          clk,
     input   wire                          reset,
 
-    input   wire                          wb_ex,
+    input   wire                          csr_reset,
 
     input   wire [31:0]                   data_sram_rdata,
 
@@ -27,6 +27,7 @@ wire [31:0] alu_result;
 wire [4:0]  dest;
 wire        gr_we;
 wire        ex_SYS;
+wire        is_ertn;
 
 wire        res_from_mem;
 wire        read_mem_1_byte;
@@ -50,7 +51,7 @@ assign MEM_allow_in = ~MEM_valid | (MEM_ready_go & WB_allow_in);
 assign MEM_to_WB_valid = MEM_valid & MEM_ready_go;
 
 always @(posedge clk) begin
-    if (reset | wb_ex)
+    if (reset | csr_reset)
         MEM_valid <= 1'b0;
     else if (MEM_allow_in)
         MEM_valid <= EX_to_MEM_valid;
@@ -67,13 +68,15 @@ assign {pc,
         read_mem_is_signed,
         dest,
         gr_we,
-        ex_SYS} = to_MEM_data_r;
+        ex_SYS,
+        is_ertn} = to_MEM_data_r;
 
 assign to_WB_data = {pc,//32
                      dest, //5
                      final_result, //32
                      gr_we, //1
-                     ex_SYS
+                     ex_SYS,
+                     is_ertn
                     };                    
 
 assign res_from_mem    = read_mem_1_byte | read_mem_2_byte | read_mem_4_byte;

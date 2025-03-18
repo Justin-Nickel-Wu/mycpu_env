@@ -4,6 +4,8 @@ module WB_stage(
     input   wire                          clk,
     input   wire                          reset,
 
+    input   wire                          csr_reset,
+
     input   wire [`to_WB_data_width-1:0]  to_WB_data,
     input   wire                          MEM_to_WB_valid,
     output  wire                          WB_allow_in,
@@ -22,7 +24,9 @@ module WB_stage(
     output wire                           wb_ex,
     output wire  [ 5:0]                   wb_ecode,
     output wire  [ 8:0]                   wb_esubcode,
-    output wire  [31:0]                   wb_pc
+    output wire  [31:0]                   wb_pc,
+    output                                ertn_flush,
+    input  wire  [ 1:0]                   csr_plv
 );
 
 reg WB_valid;
@@ -34,6 +38,7 @@ wire [ 4:0] dest;
 wire [31:0] final_result;
 wire        gr_we;
 wire        ex_SYS;
+wire        is_etrn;
 
 wire [4:0] WB_dest;
 
@@ -54,7 +59,8 @@ assign {pc,
         dest,
         final_result,
         gr_we,
-        ex_SYS} = to_WB_data_r;
+        ex_SYS,
+        is_etrn} = to_WB_data_r;
 
 assign rf_we    = gr_we && WB_valid;
 assign rf_waddr = dest;
@@ -64,6 +70,7 @@ assign wb_ex = ex_SYS & WB_valid;
 assign wb_ecode = ex_SYS ? 6'hb : 6'h0;
 assign wb_esubcode = ex_SYS ? 9'h0 : 9'h0;
 assign wb_pc = pc;
+assign ertn_flush = is_etrn && WB_valid && (csr_plv == 2'b00);
 
 // debug info generate
 assign debug_wb_pc       = pc;

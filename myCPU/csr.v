@@ -12,14 +12,14 @@ module CSR_module(
     input  wire                [31:0] csr_wvalue,   //写数据
 
     output wire                [31:0] ex_entry,
+    output wire                       csr_reset,
     input  wire                       ertn_flush,
     input  wire                       wb_ex,
     input  wire                [31:0] wb_pc,
     input  wire                [ 5:0] wb_ecode,
-    input  wire                [ 8:0] wb_esubcode
+    input  wire                [ 8:0] wb_esubcode,
+    output wire                [ 1:0] csr_plv
 );
-
-
 //CRMD
 reg  [ 1:0] csr_crmd_plv;
 reg         csr_crmd_ie;
@@ -63,7 +63,10 @@ assign csr_rvalue = ~csr_re                ? 32'b0      :
                     csr_num == `CSR_SAVE1  ? csr_save1  :
                     csr_num == `CSR_SAVE2  ? csr_save2  :
                     csr_num == `CSR_SAVE3  ? csr_save3  : 32'b0;
-assign ex_entry = csr_eentry;
+assign ex_entry = wb_ex ? csr_eentry :
+           /*ertn_flush*/ csr_era;
+assign csr_reset = wb_ex || ertn_flush;
+assign csr_plv = csr_crmd_plv;
 
 /*-----------------------------*/
 /*CRMD*/

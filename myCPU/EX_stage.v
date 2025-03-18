@@ -3,7 +3,7 @@
 module EX_stage(
     input   wire                          clk,
     input   wire                          reset,
-    input   wire                          wb_ex,
+    input   wire                          csr_reset,
 
     input   wire                          MEM_allow_in,
     input   wire [`to_EX_data_width-1:0]   to_EX_data,
@@ -38,6 +38,7 @@ wire        src2_is_imm;
 wire [4:0]  dest;
 wire        gr_we;
 wire        ex_SYS;
+wire        is_ertn;
 
 wire        read_mem_1_byte;
 wire        read_mem_2_byte;
@@ -57,7 +58,7 @@ assign EX_allow_in = ~EX_valid | (EX_ready_go & MEM_allow_in);
 assign EX_to_MEM_valid = EX_valid & EX_ready_go;
 
 always @(posedge clk) begin
-    if (reset | wb_ex)
+    if (reset | csr_reset)
         EX_valid <= 1'b0;
     else if (EX_allow_in)
         EX_valid <= ID_to_EX_valid;
@@ -82,7 +83,8 @@ assign {pc,
         write_mem_4_byte,
         dest,
         gr_we,
-        ex_SYS} = to_EX_data_r;
+        ex_SYS,
+        is_ertn} = to_EX_data_r;
 
 assign to_MEM_data = {pc,
                       alu_result,
@@ -92,7 +94,8 @@ assign to_MEM_data = {pc,
                       read_mem_is_signed,
                       dest,
                       gr_we,
-                      ex_SYS
+                      ex_SYS,
+                      is_ertn
                     };
 
 assign alu_src1 = src1_is_pc  ? pc[31:0] : rj_value;

@@ -58,6 +58,9 @@ wire [ 5:0] wb_ecode;
 wire [ 8:0] wb_esubcode;
 wire [31:0] wb_pc;
 wire [31:0] ex_entry;
+wire        ertn_flush;
+wire        csr_reset;
+wire [ 1:0] csr_plv;
 
 assign reset = ~resetn;
 
@@ -67,7 +70,7 @@ IF_stage u_IF_stage(
     .clk            (clk),
     .reset          (reset),
 
-    .wb_ex          (wb_ex),
+    .csr_reset      (csr_reset),
     .ex_entry       (ex_entry),
 
     .inst_sram_en   (inst_sram_en),
@@ -87,7 +90,7 @@ ID_stage u_ID_stage(
     .clk            (clk),
     .reset          (reset),
 
-    .wb_ex          (wb_ex),
+    .csr_reset      (csr_reset),
 
     .to_ID_data     (to_ID_data),
     .EX_allow_in    (EX_allow_in),
@@ -111,7 +114,8 @@ ID_stage u_ID_stage(
 EX_stage u_EX_stage(
     .clk            (clk),
     .reset          (reset),
-    .wb_ex          (wb_ex),
+
+    .csr_reset      (csr_reset),
 
     .MEM_allow_in   (MEM_allow_in),
     .to_EX_data     (to_EX_data),
@@ -132,7 +136,7 @@ MEM_stage u_MEM_stage(
     .clk            (clk),
     .reset          (reset),
     
-    .wb_ex          (wb_ex),
+    .csr_reset      (csr_reset),
 
     .data_sram_rdata(data_sram_rdata),
 
@@ -149,6 +153,8 @@ MEM_stage u_MEM_stage(
 WB_stage u_WB_stage(
     .clk            (clk),
     .reset          (reset),
+
+    .csr_reset      (csr_reset),
 
     .to_WB_data     (to_WB_data),
     .MEM_to_WB_valid(MEM_to_WB_valid),
@@ -168,7 +174,9 @@ WB_stage u_WB_stage(
     .wb_ex             (wb_ex),
     .wb_ecode          (wb_ecode),
     .wb_esubcode       (wb_esubcode),
-    .wb_pc             (wb_pc)
+    .wb_pc             (wb_pc),
+    .ertn_flush        (ertn_flush),
+    .csr_plv           (csr_plv)
 );
 
 CSR_module u_CSR_module(
@@ -183,11 +191,13 @@ CSR_module u_CSR_module(
     .csr_wvalue(),
 
     .ex_entry                 (ex_entry),
-    .ertn_flush(),
+    .csr_reset                (csr_reset),
+    .ertn_flush               (ertn_flush),
     .wb_ex                    (wb_ex),
     .wb_pc                    (wb_pc),
     .wb_ecode                 (wb_ecode),
-    .wb_esubcode              (wb_esubcode)
+    .wb_esubcode              (wb_esubcode),
+    .csr_plv                  (csr_plv)
 );
 
 regfile u_regfile(
