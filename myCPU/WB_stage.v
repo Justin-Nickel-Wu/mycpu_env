@@ -60,7 +60,7 @@ assign rf_we    = gr_we && WB_valid;
 assign rf_waddr = dest;
 assign rf_wdata = final_result;
 
-assign wb_ex = ex_SYS;
+assign wb_ex = ex_SYS & WB_valid;
 assign wb_ecode = ex_SYS ? 6'hb : 6'h0;
 assign wb_esubcode = ex_SYS ? 9'h0 : 9'h0;
 assign wb_pc = pc;
