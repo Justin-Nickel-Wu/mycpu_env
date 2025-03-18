@@ -10,6 +10,8 @@ module ID_stage(
     input   wire                          clk,
     input   wire                          reset,
 
+    input   wire                          wb_ex,
+
     input   wire                          IF_to_ID_valid,             
     input   wire                          EX_allow_in,
     input   wire [`to_ID_data_width-1:0]  to_ID_data,
@@ -93,6 +95,7 @@ wire        inst_div_w;
 wire        inst_mod_w;
 wire        inst_div_wu;
 wire        inst_mod_wu;
+wire        inst_syscall;
 wire        inst_slli_w;
 wire        inst_srli_w;
 wire        inst_srai_w;
@@ -143,6 +146,7 @@ wire        read_mem_is_signed;
 wire        write_mem_1_byte;
 wire        write_mem_2_byte;
 wire        write_mem_4_byte;
+wire        ex_SYS;
 
 wire [ 4:0] EX_dest;
 wire [ 4:0] MEM_dest;
@@ -151,6 +155,7 @@ wire [31:0] EX_forward_value;
 wire [31:0] MEM_forward_value;
 wire [31:0] WB_forward_value;
 wire        is_load;
+
 //控制阻塞信号
 assign rj_wait  = ~no_rj  && (rf_raddr1 != 5'b0) && (rf_raddr1 == EX_dest || rf_raddr1 == MEM_dest || rf_raddr1 == WB_dest);
 assign rkd_wait = ~no_rkd && (rf_raddr2 != 5'b0) && (rf_raddr2 == EX_dest || rf_raddr2 == MEM_dest || rf_raddr2 == WB_dest);
@@ -161,7 +166,7 @@ assign ID_to_EX_valid = ID_valid & ID_ready_go;
 //assign to_IF_valid = ID_valid;
 
 always @(posedge clk) begin
-    if (reset)
+    if (reset | wb_ex)
         ID_valid <= 1'b0;
     else if (br_taken)
         ID_valid <= 1'b0;
@@ -188,7 +193,8 @@ assign to_EX_data ={pc,
                     write_mem_2_byte,
                     write_mem_4_byte,
                     dest,
-                    gr_we
+                    gr_we,
+                    ex_SYS
                     };
 assign br_data = {br_taken, br_target};
 
@@ -229,6 +235,7 @@ assign inst_div_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & o
 assign inst_mod_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h01];
 assign inst_div_wu = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h02];
 assign inst_mod_wu = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h03];
+assign inst_syscall= op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h16];
 assign inst_slli_w = op_31_26_d[6'h00] & op_25_22_d[4'h1] & op_21_20_d[2'h0] & op_19_15_d[5'h01];
 assign inst_srli_w = op_31_26_d[6'h00] & op_25_22_d[4'h1] & op_21_20_d[2'h0] & op_19_15_d[5'h09];
 assign inst_srai_w = op_31_26_d[6'h00] & op_25_22_d[4'h1] & op_21_20_d[2'h0] & op_19_15_d[5'h11];
@@ -290,11 +297,12 @@ assign need_si16  =  inst_jirl | inst_beq | inst_bne | inst_blt | inst_bge | ins
 assign need_si20  =  inst_lu12i_w | inst_pcaddu12i;
 assign need_si26  =  inst_b | inst_bl;
 assign src2_is_4  =  inst_jirl | inst_bl;
-assign no_rj      =  inst_lu12i_w | inst_b | inst_bl | inst_pcaddu12i;
+assign no_rj      =  inst_lu12i_w | inst_b | inst_bl | inst_pcaddu12i | inst_syscall;
 assign no_rkd     =  inst_slli_w | inst_srli_w | inst_srai_w | inst_slti | inst_sltui   |
                      inst_addi_w | inst_andi   | inst_ori    | inst_xori | inst_lu12i_w | inst_pcaddu12i |
                      inst_ld_b   | inst_ld_h   | inst_ld_w   | inst_ld_bu| inst_ld_hu   |
-                     inst_jirl   | inst_b      | inst_bl;
+                     inst_jirl   | inst_b      | inst_bl     | inst_syscall;
+assign ex_SYS     =  inst_syscall;
 
 assign imm = src2_is_4 ? 32'h4                      :
              need_si20 ? {i20[19:0], 12'b0}         :
@@ -330,7 +338,8 @@ assign src2_is_imm   = inst_slli_w |
 
 assign dst_is_r1     = inst_bl;
 assign gr_we         = ~inst_st_b & ~inst_st_h &~inst_st_w & 
-                       ~inst_b & ~inst_beq & ~inst_bne & ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu;
+                       ~inst_b & ~inst_beq & ~inst_bne & ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu &
+                       ~inst_syscall;
 assign dest          = (dst_is_r1 ? 5'd1 : rd) & {5{gr_we}}; //若无需写寄存器，将dest清为0，方便前递时判断
 
 assign read_mem_1_byte    = inst_ld_b | inst_ld_bu;

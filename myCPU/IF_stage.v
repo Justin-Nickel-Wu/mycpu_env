@@ -10,8 +10,11 @@ module IF_stage(
     input   wire                        clk,
     input   wire                        reset,
 
+    input   wire                        wb_ex,
+    input   wire [31:0]                 ex_entry,
+
     output  wire                        inst_sram_en,
-    output  wire [3:0]                  inst_sram_we,
+    output  wire [ 3:0]                  inst_sram_we,
     output  wire [31:0]                 inst_sram_addr,
     output  wire [31:0]                 inst_sram_wdata,
     input   wire [31:0]                 inst_sram_rdata,
@@ -41,7 +44,7 @@ assign IF_allow_in = ~IF_valid | (IF_ready_go & ID_allow_in);
 assign IF_to_ID_valid = IF_valid & IF_ready_go;
 
 always @(posedge clk) begin
-    if (reset)
+    if (reset | wb_ex)
         IF_valid <= 1'b0;
     else if (IF_allow_in)
         IF_valid <= to_IF_valid;
@@ -57,7 +60,9 @@ end
 
 assign {br_taken, br_target} = br_data;
 assign seq_pc       = pc + 3'h4;
-assign nextpc       = br_taken ? br_target : seq_pc;
+assign nextpc       = wb_ex    ? ex_entry  :
+                      br_taken ? br_target : 
+                                 seq_pc;
 
 //读inst_sram
 

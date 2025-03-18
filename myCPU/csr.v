@@ -17,7 +17,7 @@ module CSR_module(
     input  wire                [31:0] csr_wmask,    //写掩码
     input  wire                [31:0] csr_wvalue,   //写数据
 
-    input  wire                       ex_entry,
+    output wire                [31:0] ex_entry,
     input  wire                       ertn_flush,
     input  wire                       wb_ex,
     input  wire                [31:0] wb_pc,
@@ -35,6 +35,7 @@ assign csr_rvalue = ~csr_re                ? 32'b0      :
                     csr_num == `CSR_SAVE1  ? csr_save1  :
                     csr_num == `CSR_SAVE2  ? csr_save2  :
                     csr_num == `CSR_SAVE3  ? csr_save3  : 32'b0;
+assign ex_entry = csr_eentry;
 
 /*-----------------------------*/
 /*CRMD*/
