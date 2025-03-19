@@ -125,8 +125,8 @@ end
 /*-----------------------------*/
 /*ESTAT*/
 
-assign csr_estat = {1'b0, wb_esubcode, wb_ecode, 3'b0, csr_estat_is};
-
+assign csr_estat = {1'b0, csr_estat_esubcode, csr_estat_ecode, 3'b0, csr_estat_is};
+//1 6 9 3 13
 //IS
 always @(posedge clk) begin
     if (reset)
@@ -134,6 +134,9 @@ always @(posedge clk) begin
     else if (csr_we && csr_num == `CSR_ESTAT)
         csr_estat_is[`CSR_ESTAT_IS10] <= csr_wmask[`CSR_ESTAT_IS10] & csr_wvalue[`CSR_ESTAT_IS10]
                                       | ~csr_wmask[`CSR_ESTAT_IS10] & csr_estat_is[`CSR_ESTAT_IS10];
+
+    csr_estat_is[12:2] <= 11'b0;
+
 /*don't need to work now
     csr_estat_is[9:2] <= hw_int_in[7:0];
 

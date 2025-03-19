@@ -253,5 +253,6 @@ assign alu_result = op_add | op_sub ? add_sub_result  :
 					op_div_w		? signed_div_tdata[63:32] :
 					op_mod_w		? signed_div_tdata[31: 0] : 
 					op_div_wu       ? unsigned_div_tdata[63:32]:
-					op_mod_wu       ? unsigned_div_tdata[31: 0]: 32'b0;
+					op_mod_wu       ? unsigned_div_tdata[31: 0]:
+					  				  alu_src2;
 endmodule

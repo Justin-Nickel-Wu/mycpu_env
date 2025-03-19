@@ -49,10 +49,11 @@ wire         rf_we;
 wire [ 4:0]  rf_waddr;
 wire [31:0]  rf_wdata;
 
-wire [37:0]                    EX_forward;
+wire [`forwrd_data_width  :0]  EX_forward;
 wire [`forwrd_data_width-1:0]  MEM_forward;
 wire [`forwrd_data_width-1:0]  WB_forward;
 
+wire        mem_ex;
 wire        wb_ex;
 wire [ 5:0] wb_ecode;
 wire [ 8:0] wb_esubcode;
@@ -61,6 +62,13 @@ wire [31:0] ex_entry;
 wire        ertn_flush;
 wire        csr_reset;
 wire [ 1:0] csr_plv;
+
+wire                      csr_re;
+wire [`CSR_NUM_WIDTH-1:0] csr_num;
+wire [31:0]               csr_rvalue;
+wire                      csr_we;
+wire [31:0]               csr_wmask;
+wire [31:0]               csr_wvalue;
 
 assign reset = ~resetn;
 
@@ -116,6 +124,8 @@ EX_stage u_EX_stage(
     .reset          (reset),
 
     .csr_reset      (csr_reset),
+    .mem_ex         (mem_ex),
+    .wb_ex          (wb_ex),
 
     .MEM_allow_in   (MEM_allow_in),
     .to_EX_data     (to_EX_data),
@@ -137,6 +147,7 @@ MEM_stage u_MEM_stage(
     .reset          (reset),
     
     .csr_reset      (csr_reset),
+    .mem_ex         (mem_ex),
 
     .data_sram_rdata(data_sram_rdata),
 
@@ -176,19 +187,26 @@ WB_stage u_WB_stage(
     .wb_esubcode       (wb_esubcode),
     .wb_pc             (wb_pc),
     .ertn_flush        (ertn_flush),
-    .csr_plv           (csr_plv)
+    .csr_plv           (csr_plv),
+
+    .csr_re            (csr_re),
+    .csr_num           (csr_num),
+    .csr_rvalue        (csr_rvalue),
+    .csr_we            (csr_we),
+    .csr_wmask         (csr_wmask),
+    .csr_wvalue        (csr_wvalue)
 );
 
 CSR_module u_CSR_module(
     .clk                      (clk),
     .reset                    (reset),
 
-    .csr_re(),
-    .csr_num(),
-    .csr_rvalue(),
-    .csr_we(),
-    .csr_wmask(),
-    .csr_wvalue(),
+    .csr_re                   (csr_re),
+    .csr_num                  (csr_num),
+    .csr_rvalue               (csr_rvalue),
+    .csr_we                   (csr_we),
+    .csr_wmask                (csr_wmask),
+    .csr_wvalue               (csr_wvalue),
 
     .ex_entry                 (ex_entry),
     .csr_reset                (csr_reset),

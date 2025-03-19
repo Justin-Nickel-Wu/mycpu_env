@@ -34,11 +34,11 @@ wire [31:0] br_target;
 
 //控制阻塞信号
 assign IF_ready_go = 1'b1;//无阻塞
-assign IF_allow_in = ~IF_valid | (IF_ready_go & ID_allow_in);
+assign IF_allow_in = ~IF_valid | (IF_ready_go & ID_allow_in) | csr_reset;
 assign IF_to_ID_valid = IF_valid & IF_ready_go;
 
 always @(posedge clk) begin
-    if (reset | csr_reset)
+    if (reset)
         IF_valid <= 1'b0;
     else if (IF_allow_in)
         IF_valid <= to_IF_valid;

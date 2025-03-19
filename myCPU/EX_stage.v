@@ -3,7 +3,10 @@
 module EX_stage(
     input   wire                          clk,
     input   wire                          reset,
+
     input   wire                          csr_reset,
+    input   wire                          mem_ex,
+    input   wire                          wb_ex,
 
     input   wire                          MEM_allow_in,
     input   wire [`to_EX_data_width-1:0]   to_EX_data,
@@ -17,12 +20,12 @@ module EX_stage(
     output  wire [31:0]                   data_sram_addr,
     output  wire [31:0]                   data_sram_wdata,
 
-    output  wire [37:0]                   EX_forward
+    output  wire [`forwrd_data_width:0]   EX_forward
 );
 
 reg                          EX_valid;
 wire                         EX_ready_go;
-reg  [`to_EX_data_width-1:0]  to_EX_data_r;
+reg  [`to_EX_data_width-1:0] to_EX_data_r;
 
 wire [31:0] alu_src1   ;
 wire [31:0] alu_src2   ;
@@ -53,6 +56,12 @@ wire [4:0] EX_dest;
 wire       is_load;
 wire       alu_wait;
 
+wire op_csr;
+wire EX_op_csr;
+wire [`CSR_NUM_WIDTH-1:0] csr_num;
+wire [31:0] csr_wmask_tmp;
+wire [4:0] rj;
+
 assign EX_ready_go = ~EX_valid || ~alu_wait;
 assign EX_allow_in = ~EX_valid | (EX_ready_go & MEM_allow_in);
 assign EX_to_MEM_valid = EX_valid & EX_ready_go;
@@ -64,7 +73,7 @@ always @(posedge clk) begin
         EX_valid <= ID_to_EX_valid;
 
     if (ID_to_EX_valid && EX_allow_in)
-            to_EX_data_r = to_EX_data;
+            to_EX_data_r <= to_EX_data;
 end
 
 assign {pc,
@@ -84,7 +93,11 @@ assign {pc,
         dest,
         gr_we,
         ex_SYS,
-        is_ertn} = to_EX_data_r;
+        is_ertn,
+        op_csr,
+        csr_num,
+        csr_wmask_tmp,
+        rj} = to_EX_data_r;
 
 assign to_MEM_data = {pc,
                       alu_result,
@@ -95,7 +108,11 @@ assign to_MEM_data = {pc,
                       dest,
                       gr_we,
                       ex_SYS,
-                      is_ertn
+                      is_ertn,
+                      op_csr,
+                      csr_num,
+                      csr_wmask_tmp,
+                      rj
                     };
 
 assign alu_src1 = src1_is_pc  ? pc[31:0] : rj_value;
@@ -111,14 +128,15 @@ assign data_sram_we = write_mem_1_byte ? (write_mem_addr == 2'b00 ? 4'b0001 :
 assign data_sram_wdata = write_mem_1_byte ? {4{rkd_value[ 7: 0]}} :
                          write_mem_2_byte ? {2{rkd_value[15: 0]}} :
                     /* write_mem_4_byte */  rkd_value;
-assign data_sram_en    = EX_valid;
+assign data_sram_en    = EX_valid && ~mem_ex && ~wb_ex;
 assign data_sram_addr  = {alu_result[31:2], 2'b00};
 
 //assign EX_dest = dest & {5{EX_valid}} & {5{~res_from_mem}};  //如果为读内存指令，此处前递无意义，所以将EX_dest清为0
 //错误写法：如果是一条load指令，他处于EX阶段时仍然需要返回写寄存器号信息来让ID阶段的指令阻塞。若直接清EX_dest为0，则失去了这个信息
 assign EX_dest = dest & {5{EX_valid}};
 assign is_load = EX_valid & (read_mem_1_byte | read_mem_2_byte | read_mem_4_byte);
-assign EX_forward = {EX_dest, alu_result, is_load};
+assign EX_op_csr = op_csr && EX_valid;
+assign EX_forward = {EX_dest, alu_result, is_load, EX_op_csr};
 
 /*
 //输出写内存信息

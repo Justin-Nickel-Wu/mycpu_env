@@ -20,7 +20,7 @@ module ID_stage(
     output  wire [4:0]                    rf_raddr2,
     input   wire [31:0]                   rf_rdata2,
 
-    input   wire [37:0]                    EX_forward,
+    input   wire [`forwrd_data_width  :0]  EX_forward,
     input   wire [`forwrd_data_width-1:0]  MEM_forward,
     input   wire [`forwrd_data_width-1:0]  WB_forward
 );
@@ -56,6 +56,7 @@ wire [31:0] jirl_offs;
 
 wire [ 5:0] op_31_26;
 wire [ 3:0] op_25_22;
+wire [ 1:0] op_25_24;
 wire [ 1:0] op_21_20;
 wire [ 4:0] op_19_15;
 wire [ 4:0] op_14_10;
@@ -70,6 +71,7 @@ wire [25:0] i26;
 wire [63:0] op_31_26_d;
 wire [15:0] op_25_22_d;
 wire [ 3:0] op_21_20_d;
+wire [ 3:0] op_25_24_d;
 wire [31:0] op_19_15_d;
 wire [31:0] op_14_10_d;
 
@@ -101,6 +103,7 @@ wire        inst_addi_w;
 wire        inst_andi;
 wire        inst_ori;
 wire        inst_xori;
+wire        inst_csr;
 wire        inst_ertn;
 wire        inst_ld_b;
 wire        inst_ld_h;
@@ -145,6 +148,13 @@ wire        write_mem_2_byte;
 wire        write_mem_4_byte;
 wire        ex_SYS;
 wire        is_ertn;
+wire        op_csr;
+wire [`CSR_NUM_WIDTH-1:0] csr_num;
+wire [31:0] csr_wmask_tmp;
+wire        EX_op_csr;
+wire        MEM_op_csr;
+wire        WB_op_csr;
+wire        csr_wait;
 
 wire [ 4:0] EX_dest;
 wire [ 4:0] MEM_dest;
@@ -157,7 +167,8 @@ wire        is_load;
 //控制阻塞信号
 assign rj_wait  = ~no_rj  && (rf_raddr1 != 5'b0) && (rf_raddr1 == EX_dest || rf_raddr1 == MEM_dest || rf_raddr1 == WB_dest);
 assign rkd_wait = ~no_rkd && (rf_raddr2 != 5'b0) && (rf_raddr2 == EX_dest || rf_raddr2 == MEM_dest || rf_raddr2 == WB_dest);
-assign need_wait = is_load; // rj_wait, rkd_wait会有前递信号来保证value的正确，无需阻塞
+assign csr_wait = EX_op_csr || MEM_op_csr || WB_op_csr;
+assign need_wait = is_load || csr_wait; // rj_wait, rkd_wait会有前递信号来保证value的正确，无需阻塞
 assign ID_ready_go = ~need_wait || ~ID_valid;
 assign ID_allow_in = ~ID_valid | (ID_ready_go & EX_allow_in);
 assign ID_to_EX_valid = ID_valid & ID_ready_go;
@@ -172,7 +183,7 @@ always @(posedge clk) begin
         ID_valid <= IF_to_ID_valid;
 
     if (IF_to_ID_valid && ID_allow_in)
-        to_ID_data_r = to_ID_data;
+        to_ID_data_r <= to_ID_data;
 end
 
 assign {pc, inst} = to_ID_data_r;
@@ -193,12 +204,17 @@ assign to_EX_data ={pc,
                     dest,
                     gr_we,
                     ex_SYS,
-                    is_ertn
+                    is_ertn,
+                    op_csr,
+                    csr_num,
+                    csr_wmask_tmp,
+                    rj
                     };
 assign br_data = {br_taken, br_target};
 
 assign op_31_26  = inst[31:26];
 assign op_25_22  = inst[25:22];
+assign op_25_24  = inst[25:24];
 assign op_21_20  = inst[21:20];
 assign op_19_15  = inst[19:15];
 assign op_14_10  = inst[14:10];
@@ -206,6 +222,7 @@ assign op_14_10  = inst[14:10];
 assign rd   = inst[ 4: 0];
 assign rj   = inst[ 9: 5];
 assign rk   = inst[14:10];
+assign csr_num = inst[23:10];
 
 assign i12  = inst[21:10];
 assign i20  = inst[24: 5];
@@ -217,6 +234,7 @@ decoder_4_16 u_dec1(.in(op_25_22 ), .out(op_25_22_d ));
 decoder_2_4  u_dec2(.in(op_21_20 ), .out(op_21_20_d ));
 decoder_5_32 u_dec3(.in(op_19_15 ), .out(op_19_15_d ));
 decoder_5_32 u_dec4(.in(op_14_10 ), .out(op_14_10_d ));
+decoder_2_4  u_dec5(.in(op_25_24 ), .out(op_25_24_d ));
 
 assign inst_add_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h00];
 assign inst_sub_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h02];
@@ -246,6 +264,7 @@ assign inst_addi_w = op_31_26_d[6'h00] & op_25_22_d[4'ha];
 assign inst_andi   = op_31_26_d[6'h00] & op_25_22_d[4'hd];
 assign inst_ori    = op_31_26_d[6'h00] & op_25_22_d[4'he];
 assign inst_xori   = op_31_26_d[6'h00] & op_25_22_d[4'hf];
+assign inst_csr    = op_31_26_d[6'h01] & op_25_24_d[2'h0];
 assign inst_ertn   = op_31_26_d[6'h01] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & op_14_10_d[5'h0e];
 assign inst_ld_b   = op_31_26_d[6'h0a] & op_25_22_d[4'h0];
 assign inst_ld_h   = op_31_26_d[6'h0a] & op_25_22_d[4'h1];
@@ -308,6 +327,8 @@ assign no_rkd     =  inst_slli_w | inst_srli_w | inst_srai_w | inst_slti | inst_
                      inst_syscall| inst_ertn;
 assign ex_SYS     =  inst_syscall;
 assign is_ertn    =  inst_ertn;
+assign op_csr     =  inst_csr;
+assign csr_wmask_tmp = rj_value;
 
 assign imm = src2_is_4 ? 32'h4                      :
              need_si20 ? {i20[19:0], 12'b0}         :
@@ -320,7 +341,8 @@ assign br_offs = need_si26 ? {{ 4{i26[25]}}, i26[25:0], 2'b0} :
 assign jirl_offs = {{14{i16[15]}}, i16[15:0], 2'b0};
 
 assign src_reg_is_rd = inst_beq  | inst_bne  | inst_blt | inst_bge | inst_bltu | inst_bgeu |
-                       inst_st_b | inst_st_h | inst_st_w;
+                       inst_st_b | inst_st_h | inst_st_w |
+                       inst_csr;
 
 assign src1_is_pc    = inst_jirl | inst_bl | inst_pcaddu12i;
 
@@ -382,8 +404,8 @@ assign br_taken = (   inst_beq  &&  rj_eq_rd
 assign is_b_inst = inst_b || inst_bl || inst_beq || inst_bne || inst_blt || inst_bge || inst_bltu || inst_bgeu;
 assign br_target = is_b_inst ? (pc + br_offs) : /*inst_jirl*/ (rj_value + jirl_offs);
 
-assign {EX_dest, EX_forward_value, is_load} = EX_forward;
-assign {MEM_dest, MEM_forward_value} = MEM_forward;
-assign {WB_dest, WB_forward_value} = WB_forward;
+assign {EX_dest, EX_forward_value, is_load, EX_op_csr} = EX_forward;
+assign {MEM_dest, MEM_forward_value, MEM_op_csr} = MEM_forward;
+assign {WB_dest, WB_forward_value, WB_op_csr} = WB_forward;
 
 endmodule

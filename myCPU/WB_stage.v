@@ -26,7 +26,14 @@ module WB_stage(
     output wire  [ 8:0]                   wb_esubcode,
     output wire  [31:0]                   wb_pc,
     output                                ertn_flush,
-    input  wire  [ 1:0]                   csr_plv
+    input  wire  [ 1:0]                   csr_plv,
+
+    output wire                           csr_re,
+    output wire  [`CSR_NUM_WIDTH-1:0]     csr_num,
+    input  wire  [31:0]                   csr_rvalue,
+    output                                csr_we,
+    output wire  [31:0]                   csr_wmask,
+    output wire  [31:0]                   csr_wvalue
 );
 
 reg WB_valid;
@@ -39,8 +46,11 @@ wire [31:0] final_result;
 wire        gr_we;
 wire        ex_SYS;
 wire        is_etrn;
-
-wire [4:0] WB_dest;
+wire        op_csr;
+wire        WB_op_csr;
+wire [31:0] csr_wmask_tmp;
+wire [ 4:0] rj;
+wire [ 4:0] WB_dest;
 
 assign WB_ready_go = 1'b1;//无阻塞
 assign WB_allow_in = ~WB_valid | WB_ready_go;
@@ -52,7 +62,7 @@ always @(posedge clk) begin
         WB_valid <= MEM_to_WB_valid;
 
     if (MEM_to_WB_valid && WB_allow_in)
-            to_WB_data_r = to_WB_data;
+            to_WB_data_r <= to_WB_data;
 end
 
 assign {pc,
@@ -60,11 +70,20 @@ assign {pc,
         final_result,
         gr_we,
         ex_SYS,
-        is_etrn} = to_WB_data_r;
+        is_etrn,
+        op_csr,
+        csr_num,
+        csr_wmask_tmp,
+        rj} = to_WB_data_r;
 
 assign rf_we    = gr_we && WB_valid;
 assign rf_waddr = dest;
-assign rf_wdata = final_result;
+assign rf_wdata = csr_re ? csr_rvalue : final_result;
+
+assign csr_re = WB_valid && op_csr;
+assign csr_we = WB_valid && op_csr && (rj != 5'b00000);
+assign csr_wmask =  (rj == 5'b00001) ? 32'hffffffff : csr_wmask_tmp; 
+assign csr_wvalue = final_result;
 
 assign wb_ex = ex_SYS & WB_valid;
 assign wb_ecode = ex_SYS ? 6'hb : 6'h0;
@@ -75,10 +94,11 @@ assign ertn_flush = is_etrn && WB_valid && (csr_plv == 2'b00);
 // debug info generate
 assign debug_wb_pc       = pc;
 assign debug_wb_rf_we   = {4{rf_we}};
-assign debug_wb_rf_wnum  = dest;
-assign debug_wb_rf_wdata = final_result;
+assign debug_wb_rf_wnum  = rf_waddr;
+assign debug_wb_rf_wdata = rf_wdata;
 
 assign WB_dest = dest & {5{WB_valid}};
-assign WB_forward = {WB_dest, rf_wdata};
+assign WB_op_csr = op_csr & WB_valid;
+assign WB_forward = {WB_dest, rf_wdata, WB_op_csr};
 
 endmodule

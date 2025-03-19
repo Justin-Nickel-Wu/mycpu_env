@@ -5,6 +5,7 @@ module MEM_stage(
     input   wire                          reset,
 
     input   wire                          csr_reset,
+    output  wire                          mem_ex,
 
     input   wire [31:0]                   data_sram_rdata,
 
@@ -46,9 +47,16 @@ wire [31:0] final_result;
 
 wire [4:0]  MEM_dest;
 
+wire op_csr;
+wire MEM_op_csr;
+wire [`CSR_NUM_WIDTH-1:0] csr_num;
+wire [31:0] csr_wmask_tmp;
+wire [4:0] rj;
+
 assign MEM_ready_go = 1'b1;//无阻塞
 assign MEM_allow_in = ~MEM_valid | (MEM_ready_go & WB_allow_in);
 assign MEM_to_WB_valid = MEM_valid & MEM_ready_go;
+assign mem_ex = ex_SYS || is_ertn;
 
 always @(posedge clk) begin
     if (reset | csr_reset)
@@ -57,7 +65,7 @@ always @(posedge clk) begin
         MEM_valid <= EX_to_MEM_valid;
 
     if (EX_to_MEM_valid && MEM_allow_in)
-            to_MEM_data_r = to_MEM_data;
+            to_MEM_data_r <= to_MEM_data;
 end
 
 assign {pc,
@@ -69,14 +77,22 @@ assign {pc,
         dest,
         gr_we,
         ex_SYS,
-        is_ertn} = to_MEM_data_r;
+        is_ertn,
+        op_csr,
+        csr_num,
+        csr_wmask_tmp,
+        rj} = to_MEM_data_r;
 
 assign to_WB_data = {pc,//32
                      dest, //5
                      final_result, //32
                      gr_we, //1
                      ex_SYS,
-                     is_ertn
+                     is_ertn,
+                     op_csr,
+                     csr_num,
+                     csr_wmask_tmp,
+                     rj
                     };                    
 
 assign res_from_mem    = read_mem_1_byte | read_mem_2_byte | read_mem_4_byte;
@@ -97,7 +113,8 @@ assign final_mem_data        = read_mem_1_byte ? final_mem_data_1_byte :
 assign final_result = res_from_mem ? final_mem_data : alu_result;
 
 assign MEM_dest = dest & {5{MEM_valid}};
-assign MEM_forward = {MEM_dest, final_result};
+assign MEM_op_csr = op_csr && MEM_valid;
+assign MEM_forward = {MEM_dest, final_result, MEM_op_csr};
 
 
 endmodule
