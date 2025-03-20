@@ -16,6 +16,7 @@ module CSR_module(
     input  wire                       ertn_flush,
     input  wire                       wb_ex,
     input  wire                [31:0] wb_pc,
+    input  wire                [31:0] wb_vaddr,
     input  wire                [ 5:0] wb_ecode,
     input  wire                [ 8:0] wb_esubcode,
     output wire                [ 1:0] csr_plv
@@ -32,6 +33,9 @@ wire [31:0] csr_crmd;
 reg  [ 1:0] csr_prmd_pplv;
 reg         csr_prmd_pie;
 wire [31:0] csr_prmd;
+//ECFG
+reg  [12:0] csr_ecfg_lie;
+wire [31:0] csr_ecfg;
 //ESTAT
 reg  [12:0] csr_estat_is;
 reg  [ 5:0] csr_estat_ecode;
@@ -40,6 +44,10 @@ wire [31:0] csr_estat;
 //ERA
 reg  [31:0] csr_era_pc;
 wire [31:0] csr_era;
+//BADV
+reg  [31:0] csr_badv_vaddr;
+wire [31:0] csr_badv;
+wire wb_ex_addr_err;
 //EENTRY
 reg  [25:0] csr_eentry_va;
 wire [31:0] csr_eentry;
@@ -52,12 +60,18 @@ wire [31:0] csr_save0;
 wire [31:0] csr_save1;
 wire [31:0] csr_save2;
 wire [31:0] csr_save3;
+//TID
+reg  [31:0] csr_tid_tid;
+wire [31:0] csr_tid;
+wire [31:0] coreid_in;
 
 assign csr_rvalue = ~csr_re                ? 32'b0      :
                     csr_num == `CSR_CRMD   ? csr_crmd   :
                     csr_num == `CSR_PRMD   ? csr_prmd   :
+                    csr_num == `CSR_ECFG   ? csr_ecfg   :
                     csr_num == `CSR_ESTAT  ? csr_estat  :
                     csr_num == `CSR_ERA    ? csr_era    :
+                    csr_num == `CSR_BADV   ? csr_badv   :
                     csr_num == `CSR_EENTRY ? csr_eentry :
                     csr_num == `CSR_SAVE0  ? csr_save0  :
                     csr_num == `CSR_SAVE1  ? csr_save1  :
@@ -123,6 +137,20 @@ always @(posedge clk) begin
 end
 
 /*-----------------------------*/
+/*ECFG*/
+
+assign csr_ecfg = {19'b0, csr_ecfg_lie};
+
+//LIE
+always @(posedge clk) begin
+    if (reset)
+        csr_ecfg_lie <= 13'b0;
+    else if (csr_we && csr_num == `CSR_ECFG)
+        csr_ecfg_lie <= csr_wmask[`CSR_ECFG_LIE] & csr_wvalue[`CSR_ECFG_LIE] & 13'b1_1011_1111_1111
+                     | ~csr_wmask[`CSR_ECFG_LIE] & csr_ecfg_lie;
+end
+
+/*-----------------------------*/
 /*ESTAT*/
 
 assign csr_estat = {1'b0, csr_estat_esubcode, csr_estat_ecode, 3'b0, csr_estat_is};
@@ -173,6 +201,21 @@ always @(posedge clk) begin
 end
 
 /*-----------------------------*/
+/*BADV*/
+
+assign csr_badv = csr_badv_vaddr;
+assign wb_ex_addr_err = (wb_ecode == `ECODE_ADE) || (wb_ecode == `ECODE_ALE);
+
+//VADDR
+always @(posedge clk) begin
+    if (wb_ex && wb_ex_addr_err)
+        csr_badv_vaddr <= (wb_ecode == `ECODE_ADE && wb_esubcode == `ESUBCODE_ADEF) ? wb_pc : wb_vaddr;
+    else if (csr_we && csr_num == `CSR_BADV)
+        csr_badv_vaddr <= csr_wmask[`CSR_BADV_VADDR] & csr_wvalue[`CSR_BADV_VADDR]
+                       | ~csr_wmask[`CSR_BADV_VADDR] & csr_badv_vaddr;
+end
+
+/*-----------------------------*/
 /*EENTRY*/
 
 assign csr_eentry = {csr_eentry_va, 6'b0};
@@ -205,6 +248,21 @@ always @(posedge clk) begin
     if (csr_we && csr_num == `CSR_SAVE3)
         csr_save3_data <= csr_wmask[`CSR_SAVE_DATA] & csr_wvalue[`CSR_SAVE_DATA]
                        | ~csr_wmask[`CSR_SAVE_DATA] & csr_save3_data;
+end
+
+/*-----------------------------*/
+/*TID*/
+
+assign csr_tid = csr_tid_tid;
+assign coreid_in = 32'h12345678;
+
+//TID
+always @(posedge clk) begin
+    if (reset)
+        csr_tid_tid <= coreid_in;
+    else if (csr_we && csr_num == `CSR_TID)
+        csr_tid_tid <= csr_wmask[`CSR_TID_TID] & csr_wvalue[`CSR_TID_TID]
+                    | ~csr_wmask[`CSR_TID_TID] & csr_tid_tid;
 end
 
 endmodule
