@@ -45,6 +45,8 @@ wire [ 4:0] dest;
 wire [31:0] final_result;
 wire        gr_we;
 wire        ex_SYS;
+wire        ex_ADEF;
+wire        ex_ADEM;
 wire        is_etrn;
 wire        op_csr;
 wire        WB_op_csr;
@@ -70,6 +72,8 @@ assign {pc,
         final_result,
         gr_we,
         ex_SYS,
+        ex_ADEF,
+        ex_ADEM,
         is_etrn,
         op_csr,
         csr_num,
@@ -85,9 +89,13 @@ assign csr_we = WB_valid && op_csr && (rj != 5'b00000);
 assign csr_wmask =  (rj == 5'b00001) ? 32'hffffffff : csr_wmask_tmp; 
 assign csr_wvalue = final_result;
 
-assign wb_ex = ex_SYS & WB_valid;
-assign wb_ecode = ex_SYS ? 6'hb : 6'h0;
-assign wb_esubcode = ex_SYS ? 9'h0 : 9'h0;
+assign wb_ex = WB_valid && (ex_SYS || ex_ADEF || ex_ADEM || is_etrn);
+assign wb_ecode = ex_SYS  ? 6'hb :
+                  ex_ADEF ? 6'h8 : 
+                  ex_ADEM ? 6'h8 : 6'h0;
+assign wb_esubcode = ex_SYS  ? 9'h0 : 
+                     ex_ADEF ? 9'h0 : 
+                     ex_ADEM ? 9'h1 : 9'h0;
 assign wb_pc = pc;
 assign ertn_flush = is_etrn && WB_valid && (csr_plv == 2'b00);
 

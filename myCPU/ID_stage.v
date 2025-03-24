@@ -147,6 +147,7 @@ wire        write_mem_1_byte;
 wire        write_mem_2_byte;
 wire        write_mem_4_byte;
 wire        ex_SYS;
+wire        ex_ADEF;
 wire        is_ertn;
 wire        op_csr;
 wire [`CSR_NUM_WIDTH-1:0] csr_num;
@@ -186,7 +187,7 @@ always @(posedge clk) begin
         to_ID_data_r <= to_ID_data;
 end
 
-assign {pc, inst} = to_ID_data_r;
+assign {pc, inst, ex_ADEF} = to_ID_data_r;
 assign to_EX_data ={pc,
                     rj_value,
                     rkd_value,
@@ -204,6 +205,7 @@ assign to_EX_data ={pc,
                     dest,
                     gr_we,
                     ex_SYS,
+                    ex_ADEF,
                     is_ertn,
                     op_csr,
                     csr_num,

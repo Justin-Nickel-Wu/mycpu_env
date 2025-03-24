@@ -78,6 +78,8 @@ reg  [31:0] timer_cnt;
 //TICLR
 wire [31:0] csr_ticlr;
 
+//TODO:添加更多的中断判定
+
 assign csr_rvalue = ~csr_re                ? 32'b0      :
                     csr_num == `CSR_CRMD   ? csr_crmd   :
                     csr_num == `CSR_PRMD   ? csr_prmd   :

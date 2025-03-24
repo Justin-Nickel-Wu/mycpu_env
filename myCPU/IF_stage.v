@@ -32,6 +32,8 @@ wire [31:0] seq_pc;
 wire        br_taken;
 wire [31:0] br_target;
 
+wire        ex_ADEF;
+
 //控制阻塞信号
 assign IF_ready_go = 1'b1;//无阻塞
 assign IF_allow_in = ~IF_valid | (IF_ready_go & ID_allow_in) | csr_reset;
@@ -57,6 +59,8 @@ assign seq_pc       = pc + 32'h4;
 assign nextpc       = csr_reset ? ex_entry  :
                       br_taken  ? br_target : 
                                   seq_pc;
+assign ex_ADEF      = pc[1:0] != 2'b00;
+//TODO 可能存在读错误地址的隐患
 
 //读inst_sram
 
@@ -67,6 +71,8 @@ assign inst_sram_wdata = 32'b0;
 assign inst = inst_sram_rdata;
 
 //传递数据
-assign to_ID_data = {pc, inst};//{32, 32}
+assign to_ID_data = {pc, 
+                     inst,
+                     ex_ADEF};
 
 endmodule
