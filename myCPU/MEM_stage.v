@@ -28,6 +28,7 @@ wire [31:0] alu_result;
 wire [4:0]  dest;
 wire        gr_we;
 wire        ex_SYS;
+wire        ex_BRK;
 wire        ex_ADEF;
 wire        ex_ADEM;
 wire        is_ertn;
@@ -58,7 +59,7 @@ wire [4:0] rj;
 assign MEM_ready_go = 1'b1;//无阻塞
 assign MEM_allow_in = ~MEM_valid | (MEM_ready_go & WB_allow_in);
 assign MEM_to_WB_valid = MEM_valid & MEM_ready_go;
-assign mem_ex = MEM_valid && (ex_SYS || ex_ADEF || is_ertn);
+assign mem_ex = MEM_valid && (ex_SYS || ex_BRK || ex_ADEF || is_ertn);
 
 always @(posedge clk) begin
     if (reset | csr_reset)
@@ -79,6 +80,7 @@ assign {pc,
         dest,
         gr_we,
         ex_SYS,
+        ex_BRK,
         ex_ADEF,
         ex_ADEM,
         is_ertn,
@@ -92,6 +94,7 @@ assign to_WB_data = {pc,//32
                      final_result, //32
                      gr_we, //1
                      ex_SYS,
+                     ex_BRK,
                      ex_ADEF,
                      ex_ADEM,
                      is_ertn,

@@ -93,6 +93,7 @@ wire        inst_div_w;
 wire        inst_mod_w;
 wire        inst_div_wu;
 wire        inst_mod_wu;
+wire        inst_break;
 wire        inst_syscall;
 wire        inst_slli_w;
 wire        inst_srli_w;
@@ -147,6 +148,7 @@ wire        write_mem_1_byte;
 wire        write_mem_2_byte;
 wire        write_mem_4_byte;
 wire        ex_SYS;
+wire        ex_BRK;
 wire        ex_ADEF;
 wire        is_ertn;
 wire        op_csr;
@@ -205,6 +207,7 @@ assign to_EX_data ={pc,
                     dest,
                     gr_we,
                     ex_SYS,
+                    ex_BRK,
                     ex_ADEF,
                     is_ertn,
                     op_csr,
@@ -256,6 +259,7 @@ assign inst_div_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & o
 assign inst_mod_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h01];
 assign inst_div_wu = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h02];
 assign inst_mod_wu = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h03];
+assign inst_break  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h14];
 assign inst_syscall= op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h16];
 assign inst_slli_w = op_31_26_d[6'h00] & op_25_22_d[4'h1] & op_21_20_d[2'h0] & op_19_15_d[5'h01];
 assign inst_srli_w = op_31_26_d[6'h00] & op_25_22_d[4'h1] & op_21_20_d[2'h0] & op_19_15_d[5'h09];
@@ -328,6 +332,7 @@ assign no_rkd     =  inst_slli_w | inst_srli_w | inst_srai_w | inst_slti | inst_
                      inst_jirl   | inst_b      | inst_bl     | 
                      inst_syscall| inst_ertn;
 assign ex_SYS     =  inst_syscall;
+assign ex_BRK     =  inst_break;
 assign is_ertn    =  inst_ertn;
 assign op_csr     =  inst_csr;
 assign csr_wmask_tmp = rj_value;

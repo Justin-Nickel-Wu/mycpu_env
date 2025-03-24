@@ -41,6 +41,7 @@ wire        src2_is_imm;
 wire [4:0]  dest;
 wire        gr_we;
 wire        ex_SYS;
+wire        ex_BRK;
 wire        ex_ADEF;
 wire        ex_ADEM;
 wire        is_ertn;
@@ -97,6 +98,7 @@ assign {pc,
         dest,
         gr_we,
         ex_SYS,
+        ex_BRK,
         ex_ADEF,
         is_ertn,
         op_csr,
@@ -113,6 +115,7 @@ assign to_MEM_data = {pc,
                       dest,
                       gr_we,
                       ex_SYS,
+                      ex_BRK,
                       ex_ADEF,
                       ex_ADEM,
                       is_ertn,
