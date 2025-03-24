@@ -44,6 +44,7 @@ wire        ex_SYS;
 wire        ex_BRK;
 wire        ex_ADEF;
 wire        ex_ADEM;
+wire        ex_INE;
 wire        is_ertn;
 
 wire        read_mem_1_byte;
@@ -100,6 +101,7 @@ assign {pc,
         ex_SYS,
         ex_BRK,
         ex_ADEF,
+        ex_INE,
         is_ertn,
         op_csr,
         csr_num,
@@ -118,6 +120,7 @@ assign to_MEM_data = {pc,
                       ex_BRK,
                       ex_ADEF,
                       ex_ADEM,
+                      ex_INE,
                       is_ertn,
                       op_csr,
                       csr_num,

@@ -150,6 +150,7 @@ wire        write_mem_4_byte;
 wire        ex_SYS;
 wire        ex_BRK;
 wire        ex_ADEF;
+wire        ex_INE;
 wire        is_ertn;
 wire        op_csr;
 wire [`CSR_NUM_WIDTH-1:0] csr_num;
@@ -209,6 +210,7 @@ assign to_EX_data ={pc,
                     ex_SYS,
                     ex_BRK,
                     ex_ADEF,
+                    ex_INE,
                     is_ertn,
                     op_csr,
                     csr_num,
@@ -293,6 +295,14 @@ assign inst_lu12i_w= op_31_26_d[6'h05] & ~inst[25];
 assign inst_pcaddu12i
                    = op_31_26_d[6'h07] & ~inst[25];
 
+assign ex_INE = ~(inst_add_w | inst_sub_w | inst_slt | inst_sltu | inst_nor | inst_and | inst_or | inst_xor |
+                  inst_sll_w | inst_srl_w | inst_sra_w | inst_mul_w | inst_mulh_w | inst_mulh_wu | inst_div_w |
+                  inst_mod_w | inst_div_wu | inst_mod_wu | inst_break | inst_syscall | inst_slli_w | inst_srli_w |
+                  inst_srai_w | inst_slti | inst_sltui | inst_addi_w | inst_andi | inst_ori | inst_xori | inst_csr |
+                  inst_ertn | inst_ld_b | inst_ld_h | inst_ld_w | inst_st_b | inst_st_h | inst_st_w | inst_ld_bu |
+                  inst_ld_hu | inst_jirl | inst_b | inst_bl | inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu |
+                  inst_bgeu | inst_lu12i_w | inst_pcaddu12i);
+
 assign alu_op[ 0] = inst_add_w | inst_addi_w |
                     inst_ld_b | inst_ld_h | inst_ld_w | inst_st_b | inst_st_h | inst_st_w | inst_ld_bu | inst_ld_hu |
                     inst_jirl | inst_bl | inst_pcaddu12i;
@@ -371,9 +381,9 @@ assign src2_is_imm   = inst_slli_w |
                        inst_bl     ;
 
 assign dst_is_r1     = inst_bl;
-assign gr_we         = ~inst_st_b & ~inst_st_h &~inst_st_w & 
+assign gr_we         = ~ex_INE & ~inst_st_b & ~inst_st_h &~inst_st_w & 
                        ~inst_b & ~inst_beq & ~inst_bne & ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu &
-                       ~inst_syscall & ~inst_ertn;
+                       ~inst_syscall & ~inst_break & ~inst_ertn;//指令需存在
 assign dest          = (dst_is_r1 ? 5'd1 : rd) & {5{gr_we}}; //若无需写寄存器，将dest清为0，方便前递时判断
 
 assign read_mem_1_byte    = inst_ld_b | inst_ld_bu;
