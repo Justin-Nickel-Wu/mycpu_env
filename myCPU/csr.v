@@ -11,6 +11,8 @@ module CSR_module(
     input  wire                [31:0] csr_wmask,    //写掩码
     input  wire                [31:0] csr_wvalue,   //写数据
 
+    input  wire                [ 7:0] hw_int_in,
+    input  wire                       ipi_int_in,
     output wire                [31:0] ex_entry,
     output wire                       csr_reset,
     input  wire                       ertn_flush,
@@ -64,6 +66,17 @@ wire [31:0] csr_save3;
 reg  [31:0] csr_tid_tid;
 wire [31:0] csr_tid;
 wire [31:0] coreid_in;
+//TCFG
+reg         csr_tcfg_en;
+reg         csr_tcfg_periodic;
+reg  [29:0] csr_tcfg_initval;
+wire [31:0] csr_tcfg;
+//TVAL
+wire [31:0] tcfg_next_value;
+wire [31:0] csr_tval;
+reg  [31:0] timer_cnt;
+//TICLR
+wire [31:0] csr_ticlr;
 
 assign csr_rvalue = ~csr_re                ? 32'b0      :
                     csr_num == `CSR_CRMD   ? csr_crmd   :
@@ -76,7 +89,10 @@ assign csr_rvalue = ~csr_re                ? 32'b0      :
                     csr_num == `CSR_SAVE0  ? csr_save0  :
                     csr_num == `CSR_SAVE1  ? csr_save1  :
                     csr_num == `CSR_SAVE2  ? csr_save2  :
-                    csr_num == `CSR_SAVE3  ? csr_save3  : 32'b0;
+                    csr_num == `CSR_SAVE3  ? csr_save3  : 
+                    csr_num == `CSR_TID    ? csr_tid    :
+                    csr_num == `CSR_TCFG   ? csr_tcfg   :
+                    csr_num == `CSR_TVAL   ? csr_tval   : 32'b0;
 assign ex_entry = wb_ex ? csr_eentry :
            /*ertn_flush*/ csr_era;
 assign csr_reset = wb_ex || ertn_flush;
@@ -163,9 +179,8 @@ always @(posedge clk) begin
         csr_estat_is[`CSR_ESTAT_IS10] <= csr_wmask[`CSR_ESTAT_IS10] & csr_wvalue[`CSR_ESTAT_IS10]
                                       | ~csr_wmask[`CSR_ESTAT_IS10] & csr_estat_is[`CSR_ESTAT_IS10];
 
-    csr_estat_is[12:2] <= 11'b0;
+    // csr_estat_is[12:2] <= 11'b0;
 
-/*don't need to work now
     csr_estat_is[9:2] <= hw_int_in[7:0];
 
     csr_estat_is[10] <= 1'b0;
@@ -176,7 +191,6 @@ always @(posedge clk) begin
         csr_estat_is[11] <= 1'b0;
 
     csr_estat_is[12] <= ipi_int_in; 
-*/
 end
 //ECODE ESUBCODE
 always @(posedge clk) begin
@@ -264,5 +278,51 @@ always @(posedge clk) begin
         csr_tid_tid <= csr_wmask[`CSR_TID_TID] & csr_wvalue[`CSR_TID_TID]
                     | ~csr_wmask[`CSR_TID_TID] & csr_tid_tid;
 end
+
+/*-----------------------------*/
+/*TCFG*/
+
+assign csr_tcfg = {csr_tcfg_initval, csr_tcfg_periodic, csr_tcfg_en};
+
+//EN PERIODIC INITVAL
+always @(posedge clk) begin
+    if (reset)
+        csr_tcfg_en <= 1'b0;
+    else if (csr_we && csr_num == `CSR_TCFG)
+        csr_tcfg_en <= csr_wmask[`CSR_TCFG_EN] & csr_wvalue[`CSR_TCFG_EN]
+                    | ~csr_wmask[`CSR_TCFG_EN] & csr_tcfg_en;
+    
+    if (csr_we && csr_num == `CSR_TCFG) begin
+        csr_tcfg_periodic <= csr_wmask[`CSR_TCFG_PERIODIC] & csr_wvalue[`CSR_TCFG_PERIODIC]
+                          | ~csr_wmask[`CSR_TCFG_PERIODIC] & csr_tcfg_periodic;
+        csr_tcfg_initval <= csr_wmask[`CSR_TCFG_INITVAL] & csr_wvalue[`CSR_TCFG_INITVAL]
+                         | ~csr_wmask[`CSR_TCFG_INITVAL] & csr_tcfg_initval;
+    end
+end
+
+/*-----------------------------*/
+/*TVAL*/
+
+assign csr_tval = timer_cnt;
+assign tcfg_next_value = csr_wmask & csr_wvalue
+                      | ~csr_wmask & {csr_tcfg_initval, csr_tcfg_periodic, csr_tcfg_en};
+
+always @(posedge clk) begin
+    if (reset)
+        timer_cnt <= 32'hffffffff;
+    else if (csr_we && csr_num == `CSR_TCFG && tcfg_next_value[`CSR_TCFG_EN])
+        timer_cnt <= {tcfg_next_value[`CSR_TCFG_INITVAL], 2'b0};
+    else if (csr_tcfg_en && timer_cnt != 32'hffffffff) begin
+        if (timer_cnt == 32'b0 && csr_tcfg_periodic)
+            timer_cnt <= {csr_tcfg_initval, 2'b0};
+        else
+            timer_cnt <= timer_cnt - 1'b1;
+    end
+end
+
+/*-----------------------------*/
+/*TICLR*/
+
+assign csr_ticlr = 32'b0;
 
 endmodule

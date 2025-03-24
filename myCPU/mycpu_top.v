@@ -208,6 +208,8 @@ CSR_module u_CSR_module(
     .csr_wmask                (csr_wmask),
     .csr_wvalue               (csr_wvalue),
 
+    .hw_int_in                (8'b0),
+    .ipi_int_in               (1'b0),//暂时无输入来源
     .ex_entry                 (ex_entry),
     .csr_reset                (csr_reset),
     .ertn_flush               (ertn_flush),
