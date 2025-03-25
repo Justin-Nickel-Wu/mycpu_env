@@ -44,6 +44,7 @@ wire [31:0] pc;
 wire [ 4:0] dest;
 wire [31:0] final_result;
 wire        gr_we;
+wire        ex_INT;
 wire        ex_SYS;
 wire        ex_BRK;
 wire        ex_ADEF;
@@ -73,6 +74,7 @@ assign {pc,
         dest,
         final_result,
         gr_we,
+        ex_INT,
         ex_SYS,
         ex_BRK,
         ex_ADEF,
@@ -84,7 +86,7 @@ assign {pc,
         csr_wmask_tmp,
         rj} = to_WB_data_r;
 
-assign rf_we    = gr_we && WB_valid;
+assign rf_we    = gr_we && WB_valid && !wb_ex;
 assign rf_waddr = dest;
 assign rf_wdata = csr_re ? csr_rvalue : final_result;
 
@@ -93,7 +95,8 @@ assign csr_we = WB_valid && op_csr && (rj != 5'b00000);
 assign csr_wmask =  (rj == 5'b00001) ? 32'hffffffff : csr_wmask_tmp; 
 assign csr_wvalue = final_result;
 
-assign wb_ex = WB_valid && (ex_SYS || ex_BRK || ex_ADEF || ex_ADEM || ex_INE || is_etrn);
+assign wb_ex = WB_valid && (ex_INT || ex_SYS || ex_BRK || 
+                            ex_ADEF || ex_ADEM || ex_INE || is_etrn);
 assign wb_ecode = ex_SYS  ? 6'hb :
                   ex_BRK  ? 6'hc :
                   ex_ADEF ? 6'h8 : 

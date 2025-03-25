@@ -62,6 +62,7 @@ wire [31:0] ex_entry;
 wire        ertn_flush;
 wire        csr_reset;
 wire [ 1:0] csr_plv;
+wire        has_int;
 
 wire                      csr_re;
 wire [`CSR_NUM_WIDTH-1:0] csr_num;
@@ -99,6 +100,7 @@ ID_stage u_ID_stage(
     .reset          (reset),
 
     .csr_reset      (csr_reset),
+    .has_int        (has_int),
 
     .to_ID_data     (to_ID_data),
     .EX_allow_in    (EX_allow_in),
@@ -210,6 +212,7 @@ CSR_module u_CSR_module(
 
     .hw_int_in                (8'b0),
     .ipi_int_in               (1'b0),//暂时无输入来源
+    .has_int                  (has_int),
     .ex_entry                 (ex_entry),
     .csr_reset                (csr_reset),
     .ertn_flush               (ertn_flush),

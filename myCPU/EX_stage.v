@@ -40,6 +40,8 @@ wire        src1_is_pc;
 wire        src2_is_imm;
 wire [4:0]  dest;
 wire        gr_we;
+wire        ex_ex;
+wire        ex_INT;
 wire        ex_SYS;
 wire        ex_BRK;
 wire        ex_ADEF;
@@ -98,6 +100,7 @@ assign {pc,
         write_mem_4_byte,
         dest,
         gr_we,
+        ex_INT,
         ex_SYS,
         ex_BRK,
         ex_ADEF,
@@ -116,6 +119,7 @@ assign to_MEM_data = {pc,
                       read_mem_is_signed,
                       dest,
                       gr_we,
+                      ex_INT,
                       ex_SYS,
                       ex_BRK,
                       ex_ADEF,
@@ -131,6 +135,9 @@ assign to_MEM_data = {pc,
 assign alu_src1 = src1_is_pc  ? pc[31:0] : rj_value;
 assign alu_src2 = src2_is_imm ? imm : rkd_value;
 
+assign ex_ex = EX_valid && (ex_INT || ex_SYS || ex_BRK || 
+                            ex_ADEF || ex_ADEM || ex_INE || is_ertn);
+
 assign mem_addr_low2 = alu_result[1:0];
 
 assign data_sram_we = write_mem_1_byte ? (mem_addr_low2 == 2'b00 ? 4'b0001 :
@@ -141,7 +148,7 @@ assign data_sram_we = write_mem_1_byte ? (mem_addr_low2 == 2'b00 ? 4'b0001 :
 assign data_sram_wdata = write_mem_1_byte ? {4{rkd_value[ 7: 0]}} :
                          write_mem_2_byte ? {2{rkd_value[15: 0]}} :
                     /* write_mem_4_byte */  rkd_value;
-assign data_sram_en    = EX_valid && ~mem_ex && ~wb_ex && ~ex_ADEM;
+assign data_sram_en    = EX_valid && ~mem_ex && ~wb_ex && ~ex_ex;
 assign data_sram_addr  = {alu_result[31:2], 2'b00};
 
 //判断读写内存地址是否对齐

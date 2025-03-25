@@ -5,6 +5,7 @@ module ID_stage(
     input   wire                          reset,
 
     input   wire                          csr_reset,
+    input   wire                          has_int,
 
     input   wire                          IF_to_ID_valid,             
     input   wire                          EX_allow_in,
@@ -147,6 +148,7 @@ wire        read_mem_is_signed;
 wire        write_mem_1_byte;
 wire        write_mem_2_byte;
 wire        write_mem_4_byte;
+wire        ex_INT;
 wire        ex_SYS;
 wire        ex_BRK;
 wire        ex_ADEF;
@@ -207,6 +209,7 @@ assign to_EX_data ={pc,
                     write_mem_4_byte,
                     dest,
                     gr_we,
+                    ex_INT,
                     ex_SYS,
                     ex_BRK,
                     ex_ADEF,
@@ -340,7 +343,8 @@ assign no_rkd     =  inst_slli_w | inst_srli_w | inst_srai_w | inst_slti | inst_
                      inst_addi_w | inst_andi   | inst_ori    | inst_xori | inst_lu12i_w | inst_pcaddu12i |
                      inst_ld_b   | inst_ld_h   | inst_ld_w   | inst_ld_bu| inst_ld_hu   |
                      inst_jirl   | inst_b      | inst_bl     | 
-                     inst_syscall| inst_ertn;
+                     inst_syscall| inst_ertn;//TODO：梳理一下例外处理时可以跳过的阻塞
+assign ex_INT     =  has_int;
 assign ex_SYS     =  inst_syscall;
 assign ex_BRK     =  inst_break;
 assign is_ertn    =  inst_ertn;
@@ -381,9 +385,9 @@ assign src2_is_imm   = inst_slli_w |
                        inst_bl     ;
 
 assign dst_is_r1     = inst_bl;
-assign gr_we         = ~ex_INE & ~inst_st_b & ~inst_st_h &~inst_st_w & 
+assign gr_we         = ~inst_st_b & ~inst_st_h &~inst_st_w & 
                        ~inst_b & ~inst_beq & ~inst_bne & ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu &
-                       ~inst_syscall & ~inst_break & ~inst_ertn;//指令需存在
+                       ~ex_INT & ~ex_SYS & ~ex_BRK & ~ex_ADEF & ~ex_INE & is_ertn;
 assign dest          = (dst_is_r1 ? 5'd1 : rd) & {5{gr_we}}; //若无需写寄存器，将dest清为0，方便前递时判断
 
 assign read_mem_1_byte    = inst_ld_b | inst_ld_bu;

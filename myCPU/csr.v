@@ -13,6 +13,7 @@ module CSR_module(
 
     input  wire                [ 7:0] hw_int_in,
     input  wire                       ipi_int_in,
+    output wire                       has_int,
     output wire                [31:0] ex_entry,
     output wire                       csr_reset,
     input  wire                       ertn_flush,
@@ -78,7 +79,7 @@ reg  [31:0] timer_cnt;
 //TICLR
 wire [31:0] csr_ticlr;
 
-//TODO:添加更多的中断判定
+assign has_int = ((csr_estat_is[12:0] & csr_ecfg_lie[12:0]) != 13'b0) && (csr_crmd_ie == 1'b1);
 
 assign csr_rvalue = ~csr_re                ? 32'b0      :
                     csr_num == `CSR_CRMD   ? csr_crmd   :
