@@ -17,13 +17,16 @@ module CSR_module(
     output wire                [31:0] ex_entry,
     output wire                       csr_reset,
     input  wire                       ertn_flush,
-    input  wire                       wb_ex,
+    input  wire                       wb_ex_with_ertn, //从CPU内核传入的例外包含了etrn，但实际上是不包含的，处理相关流程需注意。
     input  wire                [31:0] wb_pc,
     input  wire                [31:0] wb_vaddr,
     input  wire                [ 5:0] wb_ecode,
     input  wire                [ 8:0] wb_esubcode,
     output wire                [ 1:0] csr_plv
 );
+
+wire        wb_ex;
+
 //CRMD
 reg  [ 1:0] csr_crmd_plv;
 reg         csr_crmd_ie;
@@ -80,6 +83,7 @@ reg  [31:0] timer_cnt;
 wire [31:0] csr_ticlr;
 
 assign has_int = ((csr_estat_is[12:0] & csr_ecfg_lie[12:0]) != 13'b0) && (csr_crmd_ie == 1'b1);
+assign wb_ex = wb_ex_with_ertn && ~ertn_flush;
 
 assign csr_rvalue = ~csr_re                ? 32'b0      :
                     csr_num == `CSR_CRMD   ? csr_crmd   :
@@ -96,8 +100,8 @@ assign csr_rvalue = ~csr_re                ? 32'b0      :
                     csr_num == `CSR_TID    ? csr_tid    :
                     csr_num == `CSR_TCFG   ? csr_tcfg   :
                     csr_num == `CSR_TVAL   ? csr_tval   : 32'b0;
-assign ex_entry = wb_ex ? csr_eentry :
-           /*ertn_flush*/ csr_era;
+assign ex_entry = ertn_flush ? csr_era :
+           /*not ertn_flush*/  csr_eentry;
 assign csr_reset = wb_ex || ertn_flush;
 assign csr_plv = csr_crmd_plv;
 

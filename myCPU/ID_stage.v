@@ -412,7 +412,7 @@ assign src2_is_imm   = inst_slli_w |
 assign dst_is_r1     = inst_bl;
 assign gr_we         = ~inst_st_b & ~inst_st_h &~inst_st_w & 
                        ~inst_b & ~inst_beq & ~inst_bne & ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu &
-                       ~ex_INT & ~ex_SYS & ~ex_BRK & ~ex_ADEF & ~ex_INE & is_ertn;
+                       ~ex_INT & ~ex_SYS & ~ex_BRK & ~ex_ADEF & ~ex_INE & ~is_ertn;
 assign dest          = ~gr_we     ? 5'b0 :
                         dst_is_r1 ? 5'd1 :
                         rdcntid   ? rj   : rd; //若无需写寄存器，将dest清为0，方便前递时判断

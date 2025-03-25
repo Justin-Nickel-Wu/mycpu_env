@@ -49,6 +49,9 @@ wire         rf_we;
 wire [ 4:0]  rf_waddr;
 wire [31:0]  rf_wdata;
 
+wire [31:0]  cntvl;
+wire [31:0]  cntvh;
+
 wire [`forwrd_data_width  :0]  EX_forward;
 wire [`forwrd_data_width-1:0]  MEM_forward;
 wire [`forwrd_data_width-1:0]  WB_forward;
@@ -152,6 +155,8 @@ MEM_stage u_MEM_stage(
     .mem_ex         (mem_ex),
 
     .data_sram_rdata(data_sram_rdata),
+    .cntvl          (cntvl),
+    .cntvh          (cntvh),
 
     .WB_allow_in    (WB_allow_in),
     .to_MEM_data    (to_MEM_data),
@@ -216,11 +221,18 @@ CSR_module u_CSR_module(
     .ex_entry                 (ex_entry),
     .csr_reset                (csr_reset),
     .ertn_flush               (ertn_flush),
-    .wb_ex                    (wb_ex),
+    .wb_ex_with_ertn          (wb_ex), //注意转换
     .wb_pc                    (wb_pc),
     .wb_ecode                 (wb_ecode),
     .wb_esubcode              (wb_esubcode),
     .csr_plv                  (csr_plv)
+);
+
+StableCounter u_StableCounter(
+    .clk    (clk      ),
+    .reset  (reset    ),
+    .cntvl  (cntvl),
+    .cntvh  (cntvh)
 );
 
 regfile u_regfile(

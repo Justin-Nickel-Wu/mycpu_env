@@ -103,12 +103,14 @@ assign wb_ecode = ex_SYS  ? 6'hb :
                   ex_BRK  ? 6'hc :
                   ex_ADEF ? 6'h8 : 
                   ex_ADEM ? 6'h8 : 
-                  ex_INE  ? 6'hd : 6'h0;
+                  ex_INE  ? 6'hd : 
+                            6'h0; //ex_INT
 assign wb_esubcode = ex_SYS  ? 9'h0 : 
                      ex_BRK  ? 9'h0 :
                      ex_ADEF ? 9'h0 : 
                      ex_ADEM ? 9'h1 : 
-                     ex_INE  ? 9'h0 : 9'h0;
+                     ex_INE  ? 9'h0 : 
+                               9'h0; //ex_INT
 assign wb_pc = pc;
 assign ertn_flush = is_etrn && WB_valid && (csr_plv == 2'b00);
 

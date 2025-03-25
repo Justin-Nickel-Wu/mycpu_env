@@ -68,7 +68,8 @@ assign inst_sram_en = to_IF_valid & IF_allow_in;//读nextpc地址，所以判断
 assign inst_sram_we = {4{1'b0}};
 assign inst_sram_addr = nextpc;
 assign inst_sram_wdata = 32'b0;
-assign inst = inst_sram_rdata;
+assign inst = ex_ADEF ? 32'b0:  
+                        inst_sram_rdata; //地址无效赋全0
 
 //传递数据
 assign to_ID_data = {pc, 
