@@ -60,7 +60,6 @@ assign nextpc       = csr_reset ? ex_entry  :
                       br_taken  ? br_target : 
                                   seq_pc;
 assign ex_ADEF      = pc[1:0] != 2'b00;
-//TODO 可能存在读错误地址的隐患
 
 //读inst_sram
 
@@ -70,6 +69,7 @@ assign inst_sram_addr = nextpc;
 assign inst_sram_wdata = 32'b0;
 assign inst = ex_ADEF ? 32'b0:  
                         inst_sram_rdata; //地址无效赋全0
+//TODO：赋全0后续会被标记上指令不存在例外，这样是否会出现问题？
 
 //传递数据
 assign to_ID_data = {pc, 

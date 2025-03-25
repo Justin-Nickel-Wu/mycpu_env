@@ -61,6 +61,7 @@ wire        wb_ex;
 wire [ 5:0] wb_ecode;
 wire [ 8:0] wb_esubcode;
 wire [31:0] wb_pc;
+wire [31:0] wb_vaddr;
 wire [31:0] ex_entry;
 wire        ertn_flush;
 wire        csr_reset;
@@ -192,6 +193,7 @@ WB_stage u_WB_stage(
     .wb_ex             (wb_ex),
     .wb_ecode          (wb_ecode),
     .wb_esubcode       (wb_esubcode),
+    .wb_vaddr          (wb_vaddr),
     .wb_pc             (wb_pc),
     .ertn_flush        (ertn_flush),
     .csr_plv           (csr_plv),
@@ -223,6 +225,7 @@ CSR_module u_CSR_module(
     .ertn_flush               (ertn_flush),
     .wb_ex_with_ertn          (wb_ex), //注意转换
     .wb_pc                    (wb_pc),
+    .wb_vaddr                 (wb_vaddr),
     .wb_ecode                 (wb_ecode),
     .wb_esubcode              (wb_esubcode),
     .csr_plv                  (csr_plv)

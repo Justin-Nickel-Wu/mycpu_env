@@ -37,7 +37,7 @@ wire        ex_INT;
 wire        ex_SYS;
 wire        ex_BRK;
 wire        ex_ADEF;
-wire        ex_ADEM;
+wire        ex_ALE;
 wire        ex_INE;
 wire        is_ertn;
 
@@ -68,7 +68,7 @@ assign MEM_ready_go = 1'b1;//无阻塞
 assign MEM_allow_in = ~MEM_valid | (MEM_ready_go & WB_allow_in);
 assign MEM_to_WB_valid = MEM_valid & MEM_ready_go;
 assign mem_ex = MEM_valid && (ex_INT || ex_SYS || ex_BRK || 
-                             ex_ADEF || ex_ADEM || ex_INE ||is_ertn);
+                             ex_ADEF || ex_ALE || ex_INE ||is_ertn);
 
 always @(posedge clk) begin
     if (reset | csr_reset)
@@ -92,7 +92,7 @@ assign {pc,
         ex_SYS,
         ex_BRK,
         ex_ADEF,
-        ex_ADEM,
+        ex_ALE,
         ex_INE,
         is_ertn,
         op_csr,
@@ -111,7 +111,7 @@ assign to_WB_data = {pc,//32
                      ex_SYS,
                      ex_BRK,
                      ex_ADEF,
-                     ex_ADEM,
+                     ex_ALE,
                      ex_INE,
                      is_ertn,
                      op_csr,
@@ -138,7 +138,9 @@ assign final_mem_data        = read_mem_1_byte ? final_mem_data_1_byte :
 
 assign final_result = rdcntvh      ? cntvh : 
                       rdcntvl      ? cntvl :
-                      res_from_mem ? final_mem_data : alu_result;
+                      ex_ALE       ? alu_result :
+                      res_from_mem ? final_mem_data : 
+                                     alu_result;
 
 assign MEM_dest = dest & {5{MEM_valid}};
 assign MEM_op_csr = op_csr && MEM_valid;

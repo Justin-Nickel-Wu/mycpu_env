@@ -24,6 +24,7 @@ module WB_stage(
     output wire                           wb_ex,
     output wire  [ 5:0]                   wb_ecode,
     output wire  [ 8:0]                   wb_esubcode,
+    output wire  [31:0]                   wb_vaddr,
     output wire  [31:0]                   wb_pc,
     output                                ertn_flush,
     input  wire  [ 1:0]                   csr_plv,
@@ -49,7 +50,7 @@ wire        ex_INT;
 wire        ex_SYS;
 wire        ex_BRK;
 wire        ex_ADEF;
-wire        ex_ADEM;
+wire        ex_ALE;
 wire        ex_INE;
 wire        is_etrn;
 wire        op_csr;
@@ -79,7 +80,7 @@ assign {pc,
         ex_SYS,
         ex_BRK,
         ex_ADEF,
-        ex_ADEM,
+        ex_ALE,
         ex_INE,
         is_etrn,
         op_csr,
@@ -98,20 +99,16 @@ assign csr_wmask =  (rj == 5'b00001) ? 32'hffffffff : csr_wmask_tmp;
 assign csr_wvalue = final_result;
 
 assign wb_ex = WB_valid && (ex_INT || ex_SYS || ex_BRK || 
-                            ex_ADEF || ex_ADEM || ex_INE || is_etrn);
+                            ex_ADEF || ex_ALE || ex_INE || is_etrn);
 assign wb_ecode = ex_SYS  ? 6'hb :
                   ex_BRK  ? 6'hc :
                   ex_ADEF ? 6'h8 : 
-                  ex_ADEM ? 6'h8 : 
+                  ex_ALE  ? 6'h9 : 
                   ex_INE  ? 6'hd : 
                             6'h0; //ex_INT
-assign wb_esubcode = ex_SYS  ? 9'h0 : 
-                     ex_BRK  ? 9'h0 :
-                     ex_ADEF ? 9'h0 : 
-                     ex_ADEM ? 9'h1 : 
-                     ex_INE  ? 9'h0 : 
-                               9'h0; //ex_INT
+assign wb_esubcode = 9'h0; //暂时不存在其他可能性
 assign wb_pc = pc;
+assign wb_vaddr = final_result;
 assign ertn_flush = is_etrn && WB_valid && (csr_plv == 2'b00);
 
 // debug info generate

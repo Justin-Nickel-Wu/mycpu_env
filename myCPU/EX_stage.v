@@ -49,7 +49,7 @@ wire        ex_INT;
 wire        ex_SYS;
 wire        ex_BRK;
 wire        ex_ADEF;
-wire        ex_ADEM;
+wire        ex_ALE;
 wire        ex_INE;
 wire        is_ertn;
 
@@ -130,7 +130,7 @@ assign to_MEM_data = {pc,
                       ex_SYS,
                       ex_BRK,
                       ex_ADEF,
-                      ex_ADEM,
+                      ex_ALE,
                       ex_INE,
                       is_ertn,
                       op_csr,
@@ -146,7 +146,7 @@ assign alu_src1 = src1_is_pc  ? pc[31:0] : rj_value;
 assign alu_src2 = src2_is_imm ? imm : rkd_value;
 
 assign ex_ex = EX_valid && (ex_INT || ex_SYS || ex_BRK || 
-                            ex_ADEF || ex_ADEM || ex_INE || is_ertn);
+                            ex_ADEF || ex_ALE || ex_INE || is_ertn);
 
 assign mem_addr_low2 = alu_result[1:0];
 
@@ -164,7 +164,7 @@ assign data_sram_addr  = {alu_result[31:2], 2'b00};
 //判断读写内存地址是否对齐
 assign mem_rw_2_byte = read_mem_2_byte || write_mem_2_byte;
 assign mem_rw_4_byte = read_mem_4_byte || write_mem_4_byte;
-assign ex_ADEM = (mem_rw_2_byte && mem_addr_low2[0] != 1'b0) //2'b00 and 2'b10 is ok
+assign ex_ALE = (mem_rw_2_byte && mem_addr_low2[0] != 1'b0) //2'b00 and 2'b10 is ok
               || (mem_rw_4_byte && mem_addr_low2 != 2'b00); //only 2'b00 is ok
 //assign EX_dest = dest & {5{EX_valid}} & {5{~res_from_mem}};  //如果为读内存指令，此处前递无意义，所以将EX_dest清为0
 //错误写法：如果是一条load指令，他处于EX阶段时仍然需要返回写寄存器号信息来让ID阶段的指令阻塞。若直接清EX_dest为0，则失去了这个信息

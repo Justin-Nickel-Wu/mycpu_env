@@ -319,13 +319,14 @@ assign inst_lu12i_w= op_31_26_d[6'h05] & ~inst[25];
 assign inst_pcaddu12i
                    = op_31_26_d[6'h07] & ~inst[25];
 
-assign ex_INE = ~(inst_add_w | inst_sub_w | inst_slt | inst_sltu | inst_nor | inst_and | inst_or | inst_xor |
+assign ex_INE = ~ex_ADEF && 
+                ~(inst_add_w | inst_sub_w | inst_slt | inst_sltu | inst_nor | inst_and | inst_or | inst_xor |
                   inst_sll_w | inst_srl_w | inst_sra_w | inst_mul_w | inst_mulh_w | inst_mulh_wu | inst_div_w |
                   inst_mod_w | inst_div_wu | inst_mod_wu | inst_break | inst_syscall | inst_slli_w | inst_srli_w |
                   inst_srai_w | inst_slti | inst_sltui | inst_addi_w | inst_andi | inst_ori | inst_xori | inst_csr |
                   inst_ertn | inst_ld_b | inst_ld_h | inst_ld_w | inst_st_b | inst_st_h | inst_st_w | inst_ld_bu |
                   inst_ld_hu | inst_jirl | inst_b | inst_bl | inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu |
-                  inst_bgeu | inst_lu12i_w | inst_pcaddu12i | inst_rdcntvl_w | inst_rdcntvh_w);
+                  inst_bgeu | inst_lu12i_w | inst_pcaddu12i | inst_rdcntvl_w | inst_rdcntvh_w |inst_rdcntid_w);
 
 assign alu_op[ 0] = inst_add_w | inst_addi_w |
                     inst_ld_b | inst_ld_h | inst_ld_w | inst_st_b | inst_st_h | inst_st_w | inst_ld_bu | inst_ld_hu |
