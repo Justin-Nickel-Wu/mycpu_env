@@ -8,6 +8,8 @@ module MEM_stage(
     output  wire                          mem_ex,
 
     input   wire [31:0]                   data_sram_rdata,
+    input   wire [31:0]                   cntvl,
+    input   wire [31:0]                   cntvh,
 
     input   wire                          WB_allow_in,
     input   wire [`to_MEM_data_width-1:0] to_MEM_data,
@@ -27,6 +29,10 @@ wire [31:0] pc;
 wire [31:0] alu_result;
 wire [4:0]  dest;
 wire        gr_we;
+wire        rdcntvh;
+wire        rdcntvl;
+wire        rdcntid;
+
 wire        ex_INT;
 wire        ex_SYS;
 wire        ex_BRK;
@@ -92,7 +98,10 @@ assign {pc,
         op_csr,
         csr_num,
         csr_wmask_tmp,
-        rj} = to_MEM_data_r;
+        rj,
+        rdcntvh,
+        rdcntvl,
+        rdcntid} = to_MEM_data_r;
 
 assign to_WB_data = {pc,//32
                      dest, //5
@@ -108,7 +117,8 @@ assign to_WB_data = {pc,//32
                      op_csr,
                      csr_num,
                      csr_wmask_tmp,
-                     rj
+                     rj,
+                     rdcntid
                     };                    
 
 assign res_from_mem    = read_mem_1_byte | read_mem_2_byte | read_mem_4_byte;
@@ -126,7 +136,9 @@ assign final_mem_data        = read_mem_1_byte ? final_mem_data_1_byte :
                                read_mem_2_byte ? final_mem_data_2_byte :
                              /*read_mem_4_byte*/ mem_data_4_byte;
 
-assign final_result = res_from_mem ? final_mem_data : alu_result;
+assign final_result = rdcntvh      ? cntvh : 
+                      rdcntvl      ? cntvl :
+                      res_from_mem ? final_mem_data : alu_result;
 
 assign MEM_dest = dest & {5{MEM_valid}};
 assign MEM_op_csr = op_csr && MEM_valid;

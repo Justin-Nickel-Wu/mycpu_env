@@ -40,6 +40,10 @@ wire        src1_is_pc;
 wire        src2_is_imm;
 wire [4:0]  dest;
 wire        gr_we;
+wire        rdcntvh;
+wire        rdcntvl;
+wire        rdcntid;
+
 wire        ex_ex;
 wire        ex_INT;
 wire        ex_SYS;
@@ -109,7 +113,10 @@ assign {pc,
         op_csr,
         csr_num,
         csr_wmask_tmp,
-        rj} = to_EX_data_r;
+        rj,
+        rdcntvh,
+        rdcntvl,
+        rdcntid} = to_EX_data_r;
 
 assign to_MEM_data = {pc,
                       alu_result,
@@ -129,7 +136,10 @@ assign to_MEM_data = {pc,
                       op_csr,
                       csr_num,
                       csr_wmask_tmp,
-                      rj
+                      rj,
+                      rdcntvh,
+                      rdcntvl,
+                      rdcntid
                     };
 
 assign alu_src1 = src1_is_pc  ? pc[31:0] : rj_value;

@@ -61,6 +61,8 @@ wire [ 1:0] op_25_24;
 wire [ 1:0] op_21_20;
 wire [ 4:0] op_19_15;
 wire [ 4:0] op_14_10;
+wire [ 4:0] op_9_5;
+
 wire [ 4:0] rd;
 wire [ 4:0] rj;
 wire [ 4:0] rk;
@@ -75,7 +77,11 @@ wire [ 3:0] op_21_20_d;
 wire [ 3:0] op_25_24_d;
 wire [31:0] op_19_15_d;
 wire [31:0] op_14_10_d;
+wire [31:0] op_9_5_d;
 
+wire        inst_rdcntid_w;
+wire        inst_rdcntvl_w;
+wire        inst_rdcntvh_w;
 wire        inst_add_w;
 wire        inst_sub_w;
 wire        inst_slt;
@@ -134,6 +140,9 @@ wire        need_si16;
 wire        need_si20;
 wire        need_si26;
 wire        src2_is_4;
+wire        rdcntvh;
+wire        rdcntvl;
+wire        rdcntid;
 
 wire        no_rj;
 wire        no_rkd;
@@ -218,7 +227,10 @@ assign to_EX_data ={pc,
                     op_csr,
                     csr_num,
                     csr_wmask_tmp,
-                    rj
+                    rj,
+                    rdcntvh,
+                    rdcntvl,
+                    rdcntid
                     };
 assign br_data = {br_taken, br_target};
 
@@ -228,11 +240,13 @@ assign op_25_24  = inst[25:24];
 assign op_21_20  = inst[21:20];
 assign op_19_15  = inst[19:15];
 assign op_14_10  = inst[14:10];
+assign op_9_5    = inst[ 9: 5];
 
 assign rd   = inst[ 4: 0];
 assign rj   = inst[ 9: 5];
 assign rk   = inst[14:10];
-assign csr_num = inst[23:10];
+assign csr_num = rdcntid ? `CSR_TID :
+                           inst[23:10];
 
 assign i12  = inst[21:10];
 assign i20  = inst[24: 5];
@@ -245,7 +259,14 @@ decoder_2_4  u_dec2(.in(op_21_20 ), .out(op_21_20_d ));
 decoder_5_32 u_dec3(.in(op_19_15 ), .out(op_19_15_d ));
 decoder_5_32 u_dec4(.in(op_14_10 ), .out(op_14_10_d ));
 decoder_2_4  u_dec5(.in(op_25_24 ), .out(op_25_24_d ));
+decoder_5_32 u_dec6(.in(op_9_5   ), .out(op_9_5_d   ));
 
+assign
+    inst_rdcntid_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & op_14_10_d[5'h18] & ~op_9_5_d[5'h00];
+assign 
+    inst_rdcntvl_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & op_14_10_d[5'h18] & op_9_5_d[5'h00];
+assign
+    inst_rdcntvh_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & op_14_10_d[5'h19];
 assign inst_add_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h00];
 assign inst_sub_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h02];
 assign inst_slt    = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h04];
@@ -304,7 +325,7 @@ assign ex_INE = ~(inst_add_w | inst_sub_w | inst_slt | inst_sltu | inst_nor | in
                   inst_srai_w | inst_slti | inst_sltui | inst_addi_w | inst_andi | inst_ori | inst_xori | inst_csr |
                   inst_ertn | inst_ld_b | inst_ld_h | inst_ld_w | inst_st_b | inst_st_h | inst_st_w | inst_ld_bu |
                   inst_ld_hu | inst_jirl | inst_b | inst_bl | inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu |
-                  inst_bgeu | inst_lu12i_w | inst_pcaddu12i);
+                  inst_bgeu | inst_lu12i_w | inst_pcaddu12i | inst_rdcntvl_w | inst_rdcntvh_w);
 
 assign alu_op[ 0] = inst_add_w | inst_addi_w |
                     inst_ld_b | inst_ld_h | inst_ld_w | inst_st_b | inst_st_h | inst_st_w | inst_ld_bu | inst_ld_hu |
@@ -328,6 +349,10 @@ assign alu_op[16] = inst_mod_w;
 assign alu_op[17] = inst_div_wu;
 assign alu_op[18] = inst_mod_wu;
 
+assign rdcntvh = inst_rdcntvh_w;
+assign rdcntvl = inst_rdcntvl_w;
+assign rdcntid = inst_rdcntid_w;
+
 assign need_ui5   =  inst_slli_w | inst_srli_w | inst_srai_w;
 assign need_si12  =  inst_addi_w | inst_ld_b | inst_ld_h  | inst_ld_w  | inst_st_b 
                    | inst_st_h   | inst_st_w | inst_ld_bu | inst_ld_hu | inst_slti 
@@ -348,7 +373,7 @@ assign ex_INT     =  has_int;
 assign ex_SYS     =  inst_syscall;
 assign ex_BRK     =  inst_break;
 assign is_ertn    =  inst_ertn;
-assign op_csr     =  inst_csr;
+assign op_csr     =  inst_csr | inst_rdcntid_w;
 assign csr_wmask_tmp = rj_value;
 
 assign imm = src2_is_4 ? 32'h4                      :
@@ -388,7 +413,9 @@ assign dst_is_r1     = inst_bl;
 assign gr_we         = ~inst_st_b & ~inst_st_h &~inst_st_w & 
                        ~inst_b & ~inst_beq & ~inst_bne & ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu &
                        ~ex_INT & ~ex_SYS & ~ex_BRK & ~ex_ADEF & ~ex_INE & is_ertn;
-assign dest          = (dst_is_r1 ? 5'd1 : rd) & {5{gr_we}}; //若无需写寄存器，将dest清为0，方便前递时判断
+assign dest          = ~gr_we     ? 5'b0 :
+                        dst_is_r1 ? 5'd1 :
+                        rdcntid   ? rj   : rd; //若无需写寄存器，将dest清为0，方便前递时判断
 
 assign read_mem_1_byte    = inst_ld_b | inst_ld_bu;
 assign read_mem_2_byte    = inst_ld_h | inst_ld_hu;
