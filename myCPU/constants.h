@@ -1,5 +1,6 @@
 `ifndef CONSTAINS
     `define CONSTAINS
+    `define to_IF_data_width  32
     `define to_ID_data_width  65
     `define to_EX_data_width  223
     `define to_MEM_data_width 136

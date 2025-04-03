@@ -24,17 +24,19 @@ module mycpu_top(
 
 wire reset;
 
+wire IF_allow_in;
 wire ID_allow_in;
 wire EX_allow_in;
 wire MEM_allow_in;
 wire WB_allow_in;
 
-wire to_IF_valid;
+wire preIF_to_IF_valid;
 wire IF_to_ID_valid;
 wire ID_to_EX_valid;
 wire EX_to_MEM_valid;
 wire MEM_to_WB_valid;
 
+wire [`to_IF_data_width-1  :0]   to_IF_data;
 wire [`to_ID_data_width-1  :0]   to_ID_data;
 wire [`to_EX_data_width-1  :0]   to_EX_data;
 wire [`to_MEM_data_width-1 :0]   to_MEM_data;
@@ -77,26 +79,38 @@ wire [31:0]               csr_wvalue;
 
 assign reset = ~resetn;
 
-assign to_IF_valid = resetn;
+preIF_stage u_preIF_stage(
+    .clk               (clk),
+    .reset             (reset),
+
+    .preIF_to_IF_valid (preIF_to_IF_valid),
+    .IF_allow_in       (IF_allow_in),
+
+    .inst_sram_en      (inst_sram_en),
+    .inst_sram_we      (inst_sram_we),
+    .inst_sram_addr    (inst_sram_addr),
+    .inst_sram_wdata   (inst_sram_wdata),
+
+    .csr_reset         (csr_reset),
+    .ex_entry          (ex_entry),
+
+    .br_data           (br_data),
+    .to_IF_data        (to_IF_data)
+);
 
 IF_stage u_IF_stage(
-    .clk            (clk),
-    .reset          (reset),
+    .clk               (clk),
+    .reset             (reset),
+    .csr_reset         (csr_reset),
 
-    .csr_reset      (csr_reset),
-    .ex_entry       (ex_entry),
+    .inst_sram_rdata   (inst_sram_rdata),
 
-    .inst_sram_en   (inst_sram_en),
-    .inst_sram_we   (inst_sram_we),
-    .inst_sram_addr (inst_sram_addr),
-    .inst_sram_wdata(inst_sram_wdata),
-    .inst_sram_rdata(inst_sram_rdata),
-
-    .to_IF_valid    (to_IF_valid),
-    .ID_allow_in    (ID_allow_in),
-    .IF_to_ID_valid (IF_to_ID_valid),
-    .to_ID_data     (to_ID_data),
-    .br_data         (br_data)
+    .IF_allow_in       (IF_allow_in),
+    .preIF_to_IF_valid (preIF_to_IF_valid),
+    .ID_allow_in       (ID_allow_in),
+    .IF_to_ID_valid    (IF_to_ID_valid),
+    .to_IF_data        (to_IF_data),
+    .to_ID_data        (to_ID_data)
 );
 
 ID_stage u_ID_stage(
