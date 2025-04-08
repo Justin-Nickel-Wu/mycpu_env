@@ -4,10 +4,14 @@ module mycpu_top(
     input  wire        clk,
     input  wire        resetn,
     // inst sram interface
-    output wire        inst_sram_en,
-    output wire [3:0]  inst_sram_we,
+    output wire        inst_sram_req,
+    output wire        inst_sram_wr,
+    output wire [ 1:0] inst_sram_size,
+    output wire [ 3:0] inst_sram_wstrb,
     output wire [31:0] inst_sram_addr,
     output wire [31:0] inst_sram_wdata,
+    input  wire        inst_sram_addr_ok,
+    input  wire        inst_sram_data_ok,
     input  wire [31:0] inst_sram_rdata,
     // data sram interface
     output wire        data_sram_en,
@@ -80,23 +84,27 @@ assign reset = ~resetn;
 assign to_IF_valid = resetn;
 
 IF_stage u_IF_stage(
-    .clk            (clk),
-    .reset          (reset),
+    .clk               (clk),
+    .reset             (reset),
 
-    .csr_reset      (csr_reset),
-    .ex_entry       (ex_entry),
+    .csr_reset         (csr_reset),
+    .ex_entry          (ex_entry),
 
-    .inst_sram_en   (inst_sram_en),
-    .inst_sram_we   (inst_sram_we),
-    .inst_sram_addr (inst_sram_addr),
-    .inst_sram_wdata(inst_sram_wdata),
-    .inst_sram_rdata(inst_sram_rdata),
+    .inst_sram_req     (inst_sram_req),
+    .inst_sram_wr      (inst_sram_wr),
+    .inst_sram_size    (inst_sram_size),
+    .inst_sram_wstrb   (inst_sram_wstrb),
+    .inst_sram_addr    (inst_sram_addr),
+    .inst_sram_wdata   (inst_sram_wdata),
+    .inst_sram_addr_ok (inst_sram_addr_ok),
+    .inst_sram_data_ok (inst_sram_data_ok),
+    .inst_sram_rdata   (inst_sram_rdata),
 
-    .to_IF_valid    (to_IF_valid),
-    .ID_allow_in    (ID_allow_in),
-    .IF_to_ID_valid (IF_to_ID_valid),
-    .to_ID_data     (to_ID_data),
-    .br_data         (br_data)
+    .to_IF_valid       (to_IF_valid),
+    .ID_allow_in       (ID_allow_in),
+    .IF_to_ID_valid    (IF_to_ID_valid),
+    .to_ID_data        (to_ID_data),
+    .br_data           (br_data)
 );
 
 ID_stage u_ID_stage(
