@@ -7,7 +7,9 @@ module MEM_stage(
     input   wire                          csr_reset,
     output  wire                          mem_ex,
 
+    input   wire                          data_sram_data_ok,
     input   wire [31:0]                   data_sram_rdata,
+
     input   wire [31:0]                   cntvl,
     input   wire [31:0]                   cntvh,
 
@@ -46,6 +48,7 @@ wire        read_mem_1_byte;
 wire        read_mem_2_byte;
 wire        read_mem_4_byte;
 wire        read_mem_is_signed;
+wire        data_sram_en;
 wire [ 1:0] read_mem_addr;
 wire [ 7:0] mem_data_1_byte;
 wire [15:0] mem_data_2_byte;
@@ -64,7 +67,37 @@ wire [`CSR_NUM_WIDTH-1:0] csr_num;
 wire [31:0] csr_wmask_tmp;
 wire [4:0] rj;
 
-assign MEM_ready_go = 1'b1;//无阻塞
+/*
+localparam IDLE = 0,
+           WAIT = 1;
+
+reg  MEM_state;
+
+always @(posedge clk) begin
+    if (reset || csr_reset) begin
+        MEM_state <= IDLE;
+    end else
+        case (MEM_state)
+            IDLE: begin
+                if (data_sram_en) begin
+                    if (data_sram_data_ok) begin
+                        //向后发射，保持IDLE。能保证WB一定无阻塞。
+                    end else begin 
+                        MEM_state <= WAIT;
+                    end
+                end
+            end
+
+            WAIT: begin
+                if (data_sram_data_ok)
+                    MEM_state <= IDLE;
+            end
+        endcase
+end
+ TODO: 是否需要状态机？
+*/
+
+assign MEM_ready_go = ~data_sram_en || data_sram_data_ok;//无阻塞
 assign MEM_allow_in = ~MEM_valid | (MEM_ready_go & WB_allow_in);
 assign MEM_to_WB_valid = MEM_valid & MEM_ready_go;
 assign mem_ex = MEM_valid && (ex_INT || ex_SYS || ex_BRK || 
@@ -86,6 +119,7 @@ assign {pc,
         read_mem_2_byte,
         read_mem_4_byte,
         read_mem_is_signed,
+        data_sram_en,
         dest,
         gr_we,
         ex_INT,

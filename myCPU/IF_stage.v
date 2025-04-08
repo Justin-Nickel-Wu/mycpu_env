@@ -39,12 +39,6 @@ wire [31:0] br_target;
 wire        need_jump;
 wire        ex_ADEF;
 
-//一些inst_sram无需使用的信号
-assign inst_sram_wr = 1'b0;
-assign inst_sram_size = 2'b10;
-assign inst_sram_wstrb = 4'b0000;
-assign inst_sram_wdata = 32'b0;
-
 localparam REQ           = 0,
            WAIT_FOR_OK   = 1,
            WAIT_FOR_ID   = 2,
@@ -119,6 +113,13 @@ always @(posedge clk) begin
             end
         endcase
 end
+
+//一些inst_sram无需使用的信号
+assign inst_sram_req = inst_req;
+assign inst_sram_wr = 1'b0;
+assign inst_sram_size = 2'b10;
+assign inst_sram_wstrb = 4'b0000;
+assign inst_sram_wdata = 32'b0;
 
 //控制阻塞信号
 assign IF_valid = ~reset;

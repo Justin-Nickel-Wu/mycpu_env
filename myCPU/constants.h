@@ -2,7 +2,7 @@
     `define CONSTAINS
     `define to_ID_data_width  65
     `define to_EX_data_width  223
-    `define to_MEM_data_width 136
+    `define to_MEM_data_width 137
     `define to_WB_data_width  130
     `define br_data_width     33
     `define forwrd_data_width  38

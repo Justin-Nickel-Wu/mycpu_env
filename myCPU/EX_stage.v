@@ -15,10 +15,13 @@ module EX_stage(
     output  wire                          EX_to_MEM_valid,
     output  wire                          EX_allow_in,
 
-    output  wire                          data_sram_en,
-    output  wire [3:0]                    data_sram_we,
+    output  wire                          data_sram_req,
+    output  wire                          data_sram_wr,
+    output  wire [ 1:0]                   data_sram_size,
+    output  wire [ 3:0]                   data_sram_wstrb,
     output  wire [31:0]                   data_sram_addr,
     output  wire [31:0]                   data_sram_wdata,
+    input   wire                          data_sram_addr_ok,
 
     output  wire [`forwrd_data_width:0]   EX_forward
 );
@@ -74,9 +77,56 @@ wire [`CSR_NUM_WIDTH-1:0] csr_num;
 wire [31:0] csr_wmask_tmp;
 wire [4:0] rj;
 
-assign EX_ready_go = ~EX_valid || ~alu_wait;
+localparam IDLE = 0,
+           WAIT = 1;
+
+reg  EX_state;
+reg  data_req;
+wire data_sram_en;
+
+assign EX_ready_go = ~EX_valid || (~alu_wait && (~data_sram_en || data_sram_addr_ok));
 assign EX_allow_in = ~EX_valid | (EX_ready_go & MEM_allow_in);
 assign EX_to_MEM_valid = EX_valid & EX_ready_go;
+
+always @(posedge clk) begin
+    if (reset || csr_reset) begin
+        EX_state <= IDLE;
+        data_req <= 1'b0;
+    end else 
+        case (EX_state)
+            IDLE: begin
+                if (data_sram_en && MEM_allow_in) begin
+                    EX_state <= WAIT;
+                    data_req <= 1'b1;
+                end
+            end
+
+            WAIT: begin
+                if (data_sram_addr_ok) begin
+                    EX_state <= IDLE;
+                    data_req <= 1'b0;
+                end
+            end
+        endcase
+end
+
+
+assign data_sram_en = EX_valid && ~ex_ex && ~mem_ex && ~wb_ex;
+assign data_sram_req = data_req;
+assign data_sram_wr = write_mem_1_byte || write_mem_2_byte || write_mem_4_byte;
+assign data_sram_size = mem_rw_2_byte ? 2'b01 :
+                        mem_rw_4_byte ? 2'b10 : 2'b00;
+assign mem_addr_low2 = alu_result[1:0];
+
+assign data_sram_wstrb = write_mem_1_byte ? (mem_addr_low2 == 2'b00 ? 4'b0001 :
+                                             mem_addr_low2 == 2'b01 ? 4'b0010 :
+                                             mem_addr_low2 == 2'b10 ? 4'b0100 : 4'b1000) :
+                         write_mem_2_byte ? (mem_addr_low2 == 2'b00 ? 4'b0011 : 4'b1100) :
+                         write_mem_4_byte ? 4'b1111 : 4'b0000;
+assign data_sram_wdata = write_mem_1_byte ? {4{rkd_value[ 7: 0]}} :
+                         write_mem_2_byte ? {2{rkd_value[15: 0]}} :
+                    /* write_mem_4_byte */  rkd_value;
+assign data_sram_addr  = {alu_result[31:2], 2'b00};
 
 always @(posedge clk) begin
     if (reset | csr_reset)
@@ -124,6 +174,7 @@ assign to_MEM_data = {pc,
                       read_mem_2_byte,
                       read_mem_4_byte,
                       read_mem_is_signed,
+                      data_sram_en,
                       dest,
                       gr_we,
                       ex_INT,
@@ -147,19 +198,6 @@ assign alu_src2 = src2_is_imm ? imm : rkd_value;
 
 assign ex_ex = EX_valid && (ex_INT || ex_SYS || ex_BRK || 
                             ex_ADEF || ex_ALE || ex_INE || is_ertn);
-
-assign mem_addr_low2 = alu_result[1:0];
-
-assign data_sram_we = write_mem_1_byte ? (mem_addr_low2 == 2'b00 ? 4'b0001 :
-                                          mem_addr_low2 == 2'b01 ? 4'b0010 :
-                                          mem_addr_low2 == 2'b10 ? 4'b0100 : 4'b1000) :
-                      write_mem_2_byte ? (mem_addr_low2 == 2'b00 ? 4'b0011 : 4'b1100) :
-                      write_mem_4_byte ? 4'b1111 : 4'b0000;
-assign data_sram_wdata = write_mem_1_byte ? {4{rkd_value[ 7: 0]}} :
-                         write_mem_2_byte ? {2{rkd_value[15: 0]}} :
-                    /* write_mem_4_byte */  rkd_value;
-assign data_sram_en    = EX_valid && ~mem_ex && ~wb_ex && ~ex_ex;
-assign data_sram_addr  = {alu_result[31:2], 2'b00};
 
 //判断读写内存地址是否对齐
 assign mem_rw_2_byte = read_mem_2_byte || write_mem_2_byte;
