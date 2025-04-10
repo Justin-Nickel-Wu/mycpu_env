@@ -1,6 +1,6 @@
 `include "constants.h"
 
-module IF_state(
+module IF_stage(
     input   wire                         clk,
     input   wire                         reset,
 

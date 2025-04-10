@@ -152,33 +152,38 @@ EX_stage u_EX_stage(
     .EX_to_MEM_valid(EX_to_MEM_valid),
     .EX_allow_in    (EX_allow_in),
 
-    .data_sram_en   (data_sram_en),
-    .data_sram_we   (data_sram_we),
+    .data_sram_req  (data_sram_req),
+    .data_sram_wr   (data_sram_wr),
+    .data_sram_size (data_sram_size),
+    .data_sram_wstrb(data_sram_wstrb),
     .data_sram_addr (data_sram_addr),
     .data_sram_wdata(data_sram_wdata),
+    .data_sram_addr_ok(data_sram_addr_ok),
 
     .EX_forward     (EX_forward)
 );
 
 MEM_stage u_MEM_stage(
-    .clk            (clk),
-    .reset          (reset),
+    .clk               (clk),
+    .reset             (reset),
     
-    .csr_reset      (csr_reset),
-    .mem_ex         (mem_ex),
+    .csr_reset         (csr_reset),
+    .mem_ex            (mem_ex),
 
-    .data_sram_rdata(data_sram_rdata),
-    .cntvl          (cntvl),
-    .cntvh          (cntvh),
+    .data_sram_data_ok (data_sram_data_ok),
+    .data_sram_rdata   (data_sram_rdata),
 
-    .WB_allow_in    (WB_allow_in),
-    .to_MEM_data    (to_MEM_data),
-    .to_WB_data     (to_WB_data),
-    .EX_to_MEM_valid(EX_to_MEM_valid),
-    .MEM_to_WB_valid(MEM_to_WB_valid),
-    .MEM_allow_in   (MEM_allow_in),
+    .cntvl             (cntvl),
+    .cntvh             (cntvh),
 
-    .MEM_forward    (MEM_forward)
+    .WB_allow_in       (WB_allow_in),
+    .to_MEM_data       (to_MEM_data),
+    .to_WB_data        (to_WB_data),
+    .EX_to_MEM_valid   (EX_to_MEM_valid),
+    .MEM_to_WB_valid   (MEM_to_WB_valid),
+    .MEM_allow_in      (MEM_allow_in),
+
+    .MEM_forward       (MEM_forward)
 );
 
 WB_stage u_WB_stage(
