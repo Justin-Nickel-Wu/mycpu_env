@@ -119,6 +119,7 @@ assign inst_sram_req = inst_req;
 assign inst_sram_wr = 1'b0;
 assign inst_sram_size = 2'b10;
 assign inst_sram_wstrb = 4'b0000;
+assign inst_sram_addr = pc;
 assign inst_sram_wdata = 32'b0;
 
 //控制阻塞信号
