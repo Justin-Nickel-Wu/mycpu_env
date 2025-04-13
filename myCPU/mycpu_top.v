@@ -61,7 +61,7 @@ wire [31:0]  cntvl;
 wire [31:0]  cntvh;
 
 wire [`forwrd_data_width  :0]  EX_forward;
-wire [`forwrd_data_width-1:0]  MEM_forward;
+wire [`forwrd_data_width  :0]  MEM_forward;
 wire [`forwrd_data_width-1:0]  WB_forward;
 
 wire        mem_ex;

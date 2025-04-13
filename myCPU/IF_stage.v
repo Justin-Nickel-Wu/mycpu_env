@@ -129,7 +129,9 @@ assign IF_allow_in = ~IF_valid | (IF_ready_go & ID_allow_in) | csr_reset;
 assign IF_to_ID_valid = IF_valid & IF_ready_go;
 assign need_jump = csr_reset || br_taken;
 
-assign inst = ex_ADEF ? 32'b0 : inst_r; 
+assign inst = ex_ADEF ? 32'b0 : 
+              inst_sram_data_ok ? inst_sram_rdata :
+                                  inst_r;
 assign {br_taken, br_target} = br_data;
 assign seq_pc       = pc + 32'h4;
 assign nextpc       = csr_reset ? ex_entry  :

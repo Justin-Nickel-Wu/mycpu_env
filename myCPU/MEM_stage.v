@@ -20,7 +20,7 @@ module MEM_stage(
     output  wire                          MEM_to_WB_valid,
     output  wire                          MEM_allow_in,
 
-    output  wire [`forwrd_data_width-1:0] MEM_forward
+    output  wire [`forwrd_data_width  :0] MEM_forward
 );
 
 reg                           MEM_valid;
@@ -60,6 +60,7 @@ wire [31:0] mem_data_4_byte;
 wire [31:0] final_result;
 
 wire [4:0]  MEM_dest;
+wire        MEM_forward_wait;
 
 wire op_csr;
 wire MEM_op_csr;
@@ -176,9 +177,10 @@ assign final_result = rdcntvh      ? cntvh :
                       res_from_mem ? final_mem_data : 
                                      alu_result;
 
-assign MEM_dest = dest & {5{MEM_valid}};
+assign MEM_dest = dest & {5{MEM_valid}}; 
+assign MEM_forward_wait = MEM_valid & ~MEM_ready_go; //如果未完成等待，需要阻塞ID阶段
 assign MEM_op_csr = op_csr && MEM_valid;
-assign MEM_forward = {MEM_dest, final_result, MEM_op_csr};
+assign MEM_forward = {MEM_dest, MEM_forward_wait, final_result, MEM_op_csr};
 
 
 endmodule

@@ -84,7 +84,9 @@ reg  EX_state;
 reg  data_req;
 wire data_sram_en;
 
-assign EX_ready_go = ~EX_valid || (~alu_wait && (~data_sram_en || data_sram_addr_ok));
+assign EX_ready_go = ~EX_valid || //EX_valid 无效
+                    (~alu_wait && //alu完成计算是大前提
+                    (~data_sram_en || (data_req && data_sram_addr_ok)));//如果无需操作内存，或者完成了地址握手才能发射
 assign EX_allow_in = ~EX_valid | (EX_ready_go & MEM_allow_in);
 assign EX_to_MEM_valid = EX_valid & EX_ready_go;
 
@@ -110,8 +112,20 @@ always @(posedge clk) begin
         endcase
 end
 
+always @(posedge clk) begin
+    if (reset | csr_reset)
+        EX_valid <= 1'b0;
+    else if (EX_allow_in)
+        EX_valid <= ID_to_EX_valid;
 
-assign data_sram_en = EX_valid && ~ex_ex && ~mem_ex && ~wb_ex;
+    if (ID_to_EX_valid && EX_allow_in)
+            to_EX_data_r <= to_EX_data;
+end
+
+
+assign data_sram_en = EX_valid && ~ex_ex && ~mem_ex && ~wb_ex && 
+                (read_mem_1_byte || read_mem_2_byte || read_mem_4_byte ||
+                 write_mem_1_byte || write_mem_2_byte || write_mem_4_byte);
 assign data_sram_req = data_req;
 assign data_sram_wr = write_mem_1_byte || write_mem_2_byte || write_mem_4_byte;
 assign data_sram_size = mem_rw_2_byte ? 2'b01 :
@@ -127,16 +141,6 @@ assign data_sram_wdata = write_mem_1_byte ? {4{rkd_value[ 7: 0]}} :
                          write_mem_2_byte ? {2{rkd_value[15: 0]}} :
                     /* write_mem_4_byte */  rkd_value;
 assign data_sram_addr  = {alu_result[31:2], 2'b00};
-
-always @(posedge clk) begin
-    if (reset | csr_reset)
-        EX_valid <= 1'b0;
-    else if (EX_allow_in)
-        EX_valid <= ID_to_EX_valid;
-
-    if (ID_to_EX_valid && EX_allow_in)
-            to_EX_data_r <= to_EX_data;
-end
 
 assign {pc,
         rj_value,
@@ -204,9 +208,11 @@ assign mem_rw_2_byte = read_mem_2_byte || write_mem_2_byte;
 assign mem_rw_4_byte = read_mem_4_byte || write_mem_4_byte;
 assign ex_ALE = (mem_rw_2_byte && mem_addr_low2[0] != 1'b0) //2'b00 and 2'b10 is ok
               || (mem_rw_4_byte && mem_addr_low2 != 2'b00); //only 2'b00 is ok
+
 //assign EX_dest = dest & {5{EX_valid}} & {5{~res_from_mem}};  //如果为读内存指令，此处前递无意义，所以将EX_dest清为0
 //错误写法：如果是一条load指令，他处于EX阶段时仍然需要返回写寄存器号信息来让ID阶段的指令阻塞。若直接清EX_dest为0，则失去了这个信息
-assign EX_dest = dest & {5{EX_valid}};
+
+assign EX_dest = dest & {5{EX_valid}}; //此处未完成addr_OK也可前递，数据能保证是正确的。
 assign is_load = EX_valid & (read_mem_1_byte | read_mem_2_byte | read_mem_4_byte);
 assign EX_op_csr = op_csr && EX_valid;
 assign EX_forward = {EX_dest, alu_result, is_load, EX_op_csr};

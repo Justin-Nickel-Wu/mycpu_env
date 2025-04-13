@@ -22,7 +22,7 @@ module ID_stage(
     input   wire [31:0]                   rf_rdata2,
 
     input   wire [`forwrd_data_width  :0]  EX_forward,
-    input   wire [`forwrd_data_width-1:0]  MEM_forward,
+    input   wire [`forwrd_data_width  :0]  MEM_forward,
     input   wire [`forwrd_data_width-1:0]  WB_forward
 );
 
@@ -173,6 +173,7 @@ wire        csr_wait;
 
 wire [ 4:0] EX_dest;
 wire [ 4:0] MEM_dest;
+wire        MEM_forward_wait;
 wire [ 4:0] WB_dest;
 wire [31:0] EX_forward_value;
 wire [31:0] MEM_forward_value;
@@ -183,7 +184,7 @@ wire        is_load;
 assign rj_wait  = ~no_rj  && (rf_raddr1 != 5'b0) && (rf_raddr1 == EX_dest || rf_raddr1 == MEM_dest || rf_raddr1 == WB_dest);
 assign rkd_wait = ~no_rkd && (rf_raddr2 != 5'b0) && (rf_raddr2 == EX_dest || rf_raddr2 == MEM_dest || rf_raddr2 == WB_dest);
 assign csr_wait = EX_op_csr || MEM_op_csr || WB_op_csr;
-assign need_wait = is_load || csr_wait; // rj_wait, rkd_wait会有前递信号来保证value的正确，无需阻塞
+assign need_wait = is_load || csr_wait || MEM_forward_wait; // rj_wait, rkd_wait会有前递信号来保证value的正确，无需阻塞。MEM阶段除外
 assign ID_ready_go = ~need_wait || ~ID_valid;
 assign ID_allow_in = ~ID_valid | (ID_ready_go & EX_allow_in);
 assign ID_to_EX_valid = ID_valid & ID_ready_go;
@@ -454,7 +455,7 @@ assign is_b_inst = inst_b || inst_bl || inst_beq || inst_bne || inst_blt || inst
 assign br_target = is_b_inst ? (pc + br_offs) : /*inst_jirl*/ (rj_value + jirl_offs);
 
 assign {EX_dest, EX_forward_value, is_load, EX_op_csr} = EX_forward;
-assign {MEM_dest, MEM_forward_value, MEM_op_csr} = MEM_forward;
+assign {MEM_dest, MEM_forward_wait, MEM_forward_value, MEM_op_csr} = MEM_forward;
 assign {WB_dest, WB_forward_value, WB_op_csr} = WB_forward;
 
 endmodule
