@@ -105,7 +105,11 @@ always @(posedge clk) begin
                 end
             end
 
+            //如果因为跳转指令进入need_cancel状态，可能等待时又收到csr_reset信号，此时入口应为ex_entry,需覆盖
+            //反之因为csr_reset信号进入need_cancel状态，不可能再次需要改变入口
             NEED_CANCEL: begin
+                if (need_jump)
+                    pc <= nextpc;
                 if (inst_sram_data_ok == 1'b1) begin
                     IF_state <= REQ;
                     inst_req <= 1'b1;
