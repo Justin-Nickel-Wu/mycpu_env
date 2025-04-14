@@ -1,3 +1,7 @@
+/soc_verify/soc_hs_bram/rtl/*
+!/soc_verify/soc_hs_bram/rtl/soc_lite_top.v
+/soc_verify/soc_hs_bram/run_vivado/project/*
+
 /soc_verify/soc_dram/rtl/*
 !/soc_verify/soc_dram/rtl/soc_lite_top.v
 /soc_verify/soc_dram/run_vivado/project/*
