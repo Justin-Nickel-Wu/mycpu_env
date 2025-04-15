@@ -1,4 +1,4 @@
-`include "constants.h"
+`include "constants.vh"
 
 module mycpu_top(
     input  wire        clk,

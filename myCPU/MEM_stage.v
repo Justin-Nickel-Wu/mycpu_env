@@ -1,4 +1,4 @@
-`include "constants.h"
+`include "constants.vh"
 
 module MEM_stage(
     input   wire                          clk,

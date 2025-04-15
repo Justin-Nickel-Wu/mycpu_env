@@ -1,0 +1,11 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Ctags Build",
+            "type": "shell",
+            "command": "ctags -R -f .tags",
+            "problemMatcher": []
+        }
+    ]
+}

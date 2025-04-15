@@ -11,5 +11,4 @@
 /soc_verify/soc_axi/rtl/xilinx_ip
 /soc_verify/soc_axi/run_vivado/project/*
 
-/.vscode
-/.vscode/*
+.tags

@@ -1,0 +1,13 @@
+{
+    "files.watcherExclude": {
+        "**/target": true
+    },
+    
+    "preSaveTasks.tasks": [
+        {
+            "task": "Generate Ctags"
+        }
+    ],
+    "verilog.linting.verilator.arguments": "-Wno-MODDUP $PWD/myCPU/*.vh  $PWD/myCPU/*.v   ",
+    "verilog.linting.linter": "verilator"
+}

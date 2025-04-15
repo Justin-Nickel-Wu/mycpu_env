@@ -1,4 +1,4 @@
-`include "constants.h"
+`include "constants.vh"
 
 module CSR_module(
     input  wire                       clk,
