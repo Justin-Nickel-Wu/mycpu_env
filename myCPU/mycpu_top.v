@@ -1,8 +1,8 @@
 `include "constants.vh"
 
 module mycpu_top(
-    input  wire        clk,
-    input  wire        resetn,
+    input  wire        aclk,
+    input  wire        aresetn,
 
     //读请求通道
     output wire [ 3:0] arid,
@@ -132,12 +132,12 @@ wire                      csr_we;
 wire [31:0]               csr_wmask;
 wire [31:0]               csr_wvalue;
 
-assign reset = ~resetn;
+assign reset = ~aresetn;
 
-assign to_IF_valid = resetn;
+assign to_IF_valid = aresetn;
 
 IF_stage u_IF_stage(
-    .clk               (clk),
+    .clk               (aclk),
     .reset             (reset),
 
     .csr_reset         (csr_reset),
@@ -161,7 +161,7 @@ IF_stage u_IF_stage(
 );
 
 ID_stage u_ID_stage(
-    .clk            (clk),
+    .clk            (aclk),
     .reset          (reset),
 
     .csr_reset      (csr_reset),
@@ -187,7 +187,7 @@ ID_stage u_ID_stage(
 );
 
 EX_stage u_EX_stage(
-    .clk            (clk),
+    .clk            (aclk),
     .reset          (reset),
 
     .csr_reset      (csr_reset),
@@ -213,7 +213,7 @@ EX_stage u_EX_stage(
 );
 
 MEM_stage u_MEM_stage(
-    .clk               (clk),
+    .clk               (aclk),
     .reset             (reset),
     
     .csr_reset         (csr_reset),
@@ -236,7 +236,7 @@ MEM_stage u_MEM_stage(
 );
 
 WB_stage u_WB_stage(
-    .clk            (clk),
+    .clk            (aclk),
     .reset          (reset),
 
     .csr_reset      (csr_reset),
@@ -273,7 +273,7 @@ WB_stage u_WB_stage(
 );
 
 CSR_module u_CSR_module(
-    .clk                      (clk),
+    .clk                      (aclk),
     .reset                    (reset),
 
     .csr_re                   (csr_re),
@@ -298,14 +298,14 @@ CSR_module u_CSR_module(
 );
 
 StableCounter u_StableCounter(
-    .clk    (clk      ),
-    .reset  (reset    ),
+    .clk    (aclk),
+    .reset  (reset),
     .cntvl  (cntvl),
     .cntvh  (cntvh)
 );
 
 SRAMtoAXI_Bridge u_SRAMtoAXI_Bridge(
-    .clk                (clk),
+    .clk                (aclk),
     .reset              (reset),
 
     //Inst SRAM 接口
@@ -378,7 +378,7 @@ SRAMtoAXI_Bridge u_SRAMtoAXI_Bridge(
 );
 
 regfile u_regfile(
-    .clk    (clk      ),
+    .clk    (aclk     ),
     .raddr1 (rf_raddr1),
     .rdata1 (rf_rdata1),
     .raddr2 (rf_raddr2),
