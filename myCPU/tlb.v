@@ -184,7 +184,7 @@ assign s1_v   = s1_va_bit12 ? tlb_v1  [s1_index] : tlb_v0  [s1_index];
 //match部分
 genvar i;
 
-for (i = 0; i < TLBNUM; i++) begin
+for (i = 0; i < TLBNUM; i=i+1) begin
     assign match0[i] = (s0_vppn[18:9] == tlb_vppn[i][18:9]) //先考虑满足4MB的条件（低9位+省略的奇偶构成10位）
                     && (tlb_ps4MB[i] || s0_vppn[8:0] == tlb_vppn[i][8:0]) //再考虑满足4KB的条件
                     && ((s0_asid == tlb_asid[i]) || tlb_g[i]) && tlb_e[i]; //满足asid相同或者tlb_g置1，最后考虑当前位是否有效，tlb_e为1
@@ -199,7 +199,7 @@ wire [TLBNUM-1:0] s1_asid_eq_ASID;
 wire [TLBNUM-1:0] s1_vppn_ps_match; //还需要判断PS是否满足
 
 genvar j;
-for (j = 0; j < TLBNUM; j++) begin
+for (j = 0; j < TLBNUM; j=j+1) begin
     assign G_is_0[j]           = !tlb_g[j];
     assign s1_asid_eq_ASID[j]  = (s1_asid == tlb_asid[j]);
     assign s1_vppn_ps_match[j] = (s1_ps[5] == tlb_ps4MB[j]) ? (s1_vppn[18:9] == tlb_vppn[j][18:9]) :
@@ -215,7 +215,7 @@ end
 
 genvar k;
 generate
-for (k = 0; k < TLBNUM; k++) begin
+for (k = 0; k < TLBNUM; k=k+1) begin
     always @(posedge clk) begin
         tlb_e[k] <= inv_match[k] ? 1'b0 : tlb_e[k];
     end
