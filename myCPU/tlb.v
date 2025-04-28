@@ -36,7 +36,7 @@ input  wire [               4:0] invtlb_op,
 
 //write port
 input  wire                      we,//高电平有效
-input  wire [$clog2(TLBNUM)-1:0] we_index,
+input  wire [$clog2(TLBNUM)-1:0] w_index,
 input  wire                      w_e,
 input  wire [              18:0] w_vppn,
 input  wire [               5:0] w_ps,
@@ -88,6 +88,8 @@ reg  [       1:0] tlb_mat1 [TLBNUM-1:0];
 reg               tlb_d1   [TLBNUM-1:0];
 reg               tlb_v1   [TLBNUM-1:0];
 
+wire s0_lowest_bit;
+wire s1_lowest_bit;
 wire [TLBNUM-1:0] match0;
 wire [TLBNUM-1:0] match1;
 wire [TLBNUM-1:0] inv_match;
@@ -112,21 +114,21 @@ assign r_v1   = tlb_v1    [r_index];
 //TLBWR与TLBFILL
 always @(posedge clk) begin
     if (we) begin
-        tlb_e     [we_index] <= w_e;
-        tlb_ps4MB [we_index] <= w_ps[0];
-        tlb_vppn  [we_index] <= w_vppn;
-        tlb_asid  [we_index] <= w_asid;
-        tlb_g     [we_index] <= w_g;
-        tlb_ppn0  [we_index] <= w_ppn0;
-        tlb_plv0  [we_index] <= w_plv0;
-        tlb_mat0  [we_index] <= w_mat0;
-        tlb_d0    [we_index] <= w_d0;
-        tlb_v0    [we_index] <= w_v0;
-        tlb_ppn1  [we_index] <= w_ppn1;
-        tlb_plv1  [we_index] <= w_plv1;
-        tlb_mat1  [we_index] <= w_mat1;
-        tlb_d1    [we_index] <= w_d1;
-        tlb_v1    [we_index] <= w_v1;
+        tlb_e     [w_index] <= w_e; //注意此处tlb_e的赋值与写tlb事件冲突,但实际不会同时发生tlbinv与tlbwr事件
+        tlb_ps4MB [w_index] <= w_ps[0];
+        tlb_vppn  [w_index] <= w_vppn;
+        tlb_asid  [w_index] <= w_asid;
+        tlb_g     [w_index] <= w_g;
+        tlb_ppn0  [w_index] <= w_ppn0;
+        tlb_plv0  [w_index] <= w_plv0;
+        tlb_mat0  [w_index] <= w_mat0;
+        tlb_d0    [w_index] <= w_d0;
+        tlb_v0    [w_index] <= w_v0;
+        tlb_ppn1  [w_index] <= w_ppn1;
+        tlb_plv1  [w_index] <= w_plv1;
+        tlb_mat1  [w_index] <= w_mat1;
+        tlb_d1    [w_index] <= w_d1;
+        tlb_v1    [w_index] <= w_v1;
     end
 end
 
@@ -150,12 +152,13 @@ assign s0_index = match0[ 0] ?  0 :
                   match0[12] ? 12 :
                   match0[13] ? 13 :
                   match0[14] ? 14 : 15; //若未找到使用15
-assign s0_ppn = s0_va_bit12 ? tlb_ppn1[s0_index] : tlb_ppn0[s0_index];
-assign s0_ps  = tlb_ps4MB[s0_index] ? 6'd21 : 6'd12; //4MB:21 4KB:12
-assign s0_plv = s0_va_bit12 ? tlb_plv1[s0_index] : tlb_plv0[s0_index];
-assign s0_mat = s0_va_bit12 ? tlb_mat1[s0_index] : tlb_mat0[s0_index];
-assign s0_d   = s0_va_bit12 ? tlb_d1  [s0_index] : tlb_d0  [s0_index];
-assign s0_v   = s0_va_bit12 ? tlb_v1  [s0_index] : tlb_v0  [s0_index];
+assign s0_lowest_bit = tlb_ps4MB[s0_index] ? s0_vppn[8] : s0_va_bit12; //页号实际最低位与页大小相关
+assign s0_ppn        = s0_lowest_bit ? tlb_ppn1[s0_index] : tlb_ppn0[s0_index];
+assign s0_ps         = tlb_ps4MB[s0_index] ? 6'd21 : 6'd12; //4MB:21 4KB:12
+assign s0_plv        = s0_lowest_bit ? tlb_plv1[s0_index] : tlb_plv0[s0_index];
+assign s0_mat        = s0_lowest_bit ? tlb_mat1[s0_index] : tlb_mat0[s0_index];
+assign s0_d          = s0_lowest_bit ? tlb_d1  [s0_index] : tlb_d0  [s0_index];
+assign s0_v          = s0_lowest_bit ? tlb_v1  [s0_index] : tlb_v0  [s0_index];
 
 //s1部分
 assign s1_found = |match1;
@@ -174,12 +177,13 @@ assign s1_index = match1[ 0] ?  0 :
                   match1[12] ? 12 :
                   match1[13] ? 13 :
                   match1[14] ? 14 : 15; //若未找到使用15
-assign s1_ppn = s1_va_bit12 ? tlb_ppn1[s1_index] : tlb_ppn0[s1_index];
-assign s1_ps  = tlb_ps4MB[s1_index] ? 6'd21 : 6'd12; //4MB:21 4KB:12
-assign s1_plv = s1_va_bit12 ? tlb_plv1[s1_index] : tlb_plv0[s1_index];
-assign s1_mat = s1_va_bit12 ? tlb_mat1[s1_index] : tlb_mat0[s1_index];
-assign s1_d   = s1_va_bit12 ? tlb_d1  [s1_index] : tlb_d0  [s1_index];
-assign s1_v   = s1_va_bit12 ? tlb_v1  [s1_index] : tlb_v0  [s1_index];
+assign s1_lowest_bit = tlb_ps4MB[s1_index] ? s1_vppn[8] : s1_va_bit12; //页号实际最低位与页大小相关
+assign s1_ppn        = s1_lowest_bit ? tlb_ppn1[s1_index] : tlb_ppn0[s1_index];
+assign s1_ps         = tlb_ps4MB[s1_index] ? 6'd21 : 6'd12; //4MB:21 4KB:12
+assign s1_plv        = s1_lowest_bit ? tlb_plv1[s1_index] : tlb_plv0[s1_index];
+assign s1_mat        = s1_lowest_bit ? tlb_mat1[s1_index] : tlb_mat0[s1_index];
+assign s1_d          = s1_lowest_bit ? tlb_d1  [s1_index] : tlb_d0  [s1_index];
+assign s1_v          = s1_lowest_bit ? tlb_v1  [s1_index] : tlb_v0  [s1_index];
 
 //match部分
 genvar i;
@@ -196,20 +200,20 @@ end
 //inv_match部分
 wire [TLBNUM-1:0] G_is_0;
 wire [TLBNUM-1:0] s1_asid_eq_ASID;
-wire [TLBNUM-1:0] s1_vppn_ps_match; //还需要判断PS是否满足
+wire [TLBNUM-1:0] s1_vppn_match; //判断虚拟地址是否匹配需要同时参考vppn与ps域
 
 genvar j;
 for (j = 0; j < TLBNUM; j=j+1) begin
     assign G_is_0[j]           = !tlb_g[j];
-    assign s1_asid_eq_ASID[j]  = (s1_asid == tlb_asid[j]);
-    assign s1_vppn_ps_match[j] = (s1_ps[5] == tlb_ps4MB[j]) ? (s1_vppn[18:9] == tlb_vppn[j][18:9]) :
-                                                              (s1_vppn[18:0] == tlb_vppn[j][18:0]);
+    assign s1_asid_eq_ASID[j]  = (s1_asid == tlb_asid[j]); //判断asid是否相同
+    assign s1_vppn_match[j] = tlb_ps4MB[j] ? s1_vppn[18:9] == tlb_vppn[j][18:9] :
+                                             s1_vppn[18:0] == tlb_vppn[j][18:0];
     assign inv_match[j] = ((invtlb_op == 5'd0 || invtlb_op == 5'd1)
                         || (invtlb_op == 5'd2 && !G_is_0[k])
                         || (invtlb_op == 5'd3 &&  G_is_0[k])
                         || (invtlb_op == 5'd4 &&  G_is_0[k] && s1_asid_eq_ASID[k])
-                        || (invtlb_op == 5'd5 &&  G_is_0[k] && s1_asid_eq_ASID[k] && s1_vppn_ps_match[k])
-                        || (invtlb_op == 5'd6 && !G_is_0[k] && s1_asid_eq_ASID[k] && s1_vppn_ps_match[k]))
+                        || (invtlb_op == 5'd5 &&  G_is_0[k] && s1_asid_eq_ASID[k] && s1_vppn_match[k])
+                        || (invtlb_op == 5'd6 && !G_is_0[k] && s1_asid_eq_ASID[k] && s1_vppn_match[k]))
                         && invtlb_valid;
 end
 
@@ -217,7 +221,8 @@ genvar k;
 generate
 for (k = 0; k < TLBNUM; k=k+1) begin
     always @(posedge clk) begin
-        tlb_e[k] <= inv_match[k] ? 1'b0 : tlb_e[k];
+        if  (inv_match[k])
+            tlb_e[k] <= 1'b0; //注意此处tlb_e的赋值与写tlb事件冲突,但实际不会同时发生tlbinv与tlbwr事件
     end
 end
 endgenerate

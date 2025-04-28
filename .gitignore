@@ -12,6 +12,7 @@
 /soc_verify/soc_axi/run_vivado/project/*
 
 /module_verify/tlb_verify/run_vivado/project/*
+/module_verify/tlb_verify/rtl/xilinx_ip/*
 
 .DS_Store
 .tags
