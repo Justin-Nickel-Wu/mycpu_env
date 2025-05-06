@@ -1,13 +1,14 @@
 `ifndef CONSTAINS
     `define CONSTAINS
     `define to_ID_data_width  65
-    `define to_EX_data_width  223
-    `define to_MEM_data_width 137
-    `define to_WB_data_width  130
+    `define to_EX_data_width  224
+    `define to_MEM_data_width 165 + $clog2(`TLBNUM)
+    `define to_WB_data_width  132 + $clog2(`TLBNUM)
     `define br_data_width     33
     `define forwrd_data_width  38
 
     `define CSR_NUM_WIDTH 14
+    `define TLBNUM        16
 
     `define CSR_CRMD      `CSR_NUM_WIDTH'h0
     `define CSR_PRMD      `CSR_NUM_WIDTH'h1

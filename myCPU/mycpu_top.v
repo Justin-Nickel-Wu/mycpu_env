@@ -132,6 +132,9 @@ wire                      csr_we;
 wire [31:0]               csr_wmask;
 wire [31:0]               csr_wvalue;
 
+wire mem_wr_asid_tlbehi;
+wire wb_wr_asid_tlbehi;
+
 assign reset = ~aresetn;
 
 assign to_IF_valid = aresetn;
@@ -185,7 +188,7 @@ ID_stage u_ID_stage(
     .MEM_forward    (MEM_forward),
     .WB_forward     (WB_forward)
 );
-
+//TODO: 完成模块连线
 EX_stage u_EX_stage(
     .clk            (aclk),
     .reset          (reset),
@@ -208,6 +211,19 @@ EX_stage u_EX_stage(
     .data_sram_addr (data_sram_addr),
     .data_sram_wdata(data_sram_wdata),
     .data_sram_addr_ok(data_sram_addr_ok),
+    //to TLB
+    .s1_vppn        (),
+    .s1_va_bit12    (),
+    .data_tlb_found    (),
+    .data_tlb_index    (),
+    .data_tlb_ppn      (),
+    .data_tlb_plv      (),
+    .data_tlb_mat      (),
+    .data_tlb_d        (),
+    .data_tlb_v        (),
+
+    .mem_wr_asid_tlbehi (mem_wr_asid_tlbehi),
+    .wb_wr_asid_tlbehi  (wb_wr_asid_tlbehi),
 
     .EX_forward     (EX_forward)
 );
@@ -232,7 +248,9 @@ MEM_stage u_MEM_stage(
     .MEM_to_WB_valid   (MEM_to_WB_valid),
     .MEM_allow_in      (MEM_allow_in),
 
-    .MEM_forward       (MEM_forward)
+    .MEM_forward       (MEM_forward),
+    //to EX
+    .mem_wr_asid_tlbehi (mem_wr_asid_tlbehi)
 );
 
 WB_stage u_WB_stage(
@@ -269,7 +287,13 @@ WB_stage u_WB_stage(
     .csr_rvalue        (csr_rvalue),
     .csr_we            (csr_we),
     .csr_wmask         (csr_wmask),
-    .csr_wvalue        (csr_wvalue)
+    .csr_wvalue        (csr_wvalue),
+    //TLB ins
+    .tlbsrch_en        (),
+    .data_tlb_found    (),
+    .data_tlb_index    (),
+
+    .wb_wr_asid_tlbehi (wb_wr_asid_tlbehi)
 );
 
 CSR_module u_CSR_module(

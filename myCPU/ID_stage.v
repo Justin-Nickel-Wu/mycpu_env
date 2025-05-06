@@ -112,6 +112,7 @@ wire        inst_andi;
 wire        inst_ori;
 wire        inst_xori;
 wire        inst_csr;
+wire        inst_tlbsrch;
 wire        inst_ertn;
 wire        inst_ld_b;
 wire        inst_ld_h;
@@ -143,6 +144,7 @@ wire        src2_is_4;
 wire        rdcntvh;
 wire        rdcntvl;
 wire        rdcntid;
+wire        tlbsrch_en;
 
 wire        no_rj;
 wire        no_rkd;
@@ -226,12 +228,14 @@ assign to_EX_data ={pc,
                     ex_INE,
                     is_ertn,
                     op_csr,
+                    csr_we,
                     csr_num,
                     csr_wmask_tmp,
                     rj,
                     rdcntvh,
                     rdcntvl,
-                    rdcntid
+                    rdcntid,
+                    tlbsrch_en
                     };
 assign br_data = {br_taken, br_target};
 
@@ -248,6 +252,7 @@ assign rj   = inst[ 9: 5];
 assign rk   = inst[14:10];
 assign csr_num = rdcntid ? `CSR_TID :
                            inst[23:10];
+assign csr_we =  op_csr && ~rdcntid && (rj != 5'b00000);
 
 assign i12  = inst[21:10];
 assign i20  = inst[24: 5];
@@ -298,6 +303,7 @@ assign inst_andi   = op_31_26_d[6'h00] & op_25_22_d[4'hd];
 assign inst_ori    = op_31_26_d[6'h00] & op_25_22_d[4'he];
 assign inst_xori   = op_31_26_d[6'h00] & op_25_22_d[4'hf];
 assign inst_csr    = op_31_26_d[6'h01] & op_25_24_d[2'h0];
+assign inst_tlbsrch= op_31_25_d[6'h01] & op_25_22_d[2'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & op_14_10_d[5'h0a];
 assign inst_ertn   = op_31_26_d[6'h01] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & op_14_10_d[5'h0e];
 assign inst_ld_b   = op_31_26_d[6'h0a] & op_25_22_d[4'h0];
 assign inst_ld_h   = op_31_26_d[6'h0a] & op_25_22_d[4'h1];
@@ -354,6 +360,7 @@ assign alu_op[18] = inst_mod_wu;
 assign rdcntvh = inst_rdcntvh_w;
 assign rdcntvl = inst_rdcntvl_w;
 assign rdcntid = inst_rdcntid_w;
+assign tlbsrch_en = inst_tlbsrch;
 
 assign need_ui5   =  inst_slli_w | inst_srli_w | inst_srai_w;
 assign need_si12  =  inst_addi_w | inst_ld_b | inst_ld_h  | inst_ld_w  | inst_st_b 

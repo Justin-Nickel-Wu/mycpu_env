@@ -20,7 +20,9 @@ module MEM_stage(
     output  wire                          MEM_to_WB_valid,
     output  wire                          MEM_allow_in,
 
-    output  wire [`forwrd_data_width  :0] MEM_forward
+    output  wire [`forwrd_data_width  :0] MEM_forward,
+    //to EX
+    output  wire                          mem_wr_asid_tlbehi
 );
 
 reg                           MEM_valid;
@@ -33,7 +35,7 @@ wire [4:0]  dest;
 wire        gr_we;
 wire        rdcntvh;
 wire        rdcntvl;
-wire        rdcntid;
+wire        tlbsrch_en;
 
 wire        ex_INT;
 wire        ex_SYS;
@@ -65,8 +67,17 @@ wire        MEM_forward_wait;
 wire op_csr;
 wire MEM_op_csr;
 wire [`CSR_NUM_WIDTH-1:0] csr_num;
+wire csr_we;
 wire [31:0] csr_wmask_tmp;
 wire [4:0] rj;
+
+wire                          data_tlb_found;
+wire [   $clog2(`TLBNUM)-1:0] data_tlb_index;
+wire [                  19:0] data_tlb_ppn;
+wire [                   1:0] data_tlb_plv;
+wire [                   1:0] data_tlb_mat;
+wire                          data_tlb_d;
+wire                          data_tlb_v;
 
 /*
 localparam IDLE = 0,
@@ -132,11 +143,12 @@ assign {pc,
         is_ertn,
         op_csr,
         csr_num,
+        csr_we,
         csr_wmask_tmp,
         rj,
         rdcntvh,
         rdcntvl,
-        rdcntid} = to_MEM_data_r;
+        tlbsrch_en} = to_MEM_data_r;
 
 assign to_WB_data = {pc,//32
                      dest, //5
@@ -151,9 +163,12 @@ assign to_WB_data = {pc,//32
                      is_ertn,
                      op_csr,
                      csr_num,
+                     csr_we,
                      csr_wmask_tmp,
                      rj,
-                     rdcntid
+                     tlbsrch_en,
+                     data_tlb_found,
+                     data_tlb_index
                     };                    
 
 assign res_from_mem    = read_mem_1_byte | read_mem_2_byte | read_mem_4_byte;
@@ -181,6 +196,6 @@ assign MEM_dest = dest & {5{MEM_valid}};
 assign MEM_forward_wait = MEM_valid & ~MEM_ready_go; //如果未完成等待，需要阻塞ID阶段
 assign MEM_op_csr = op_csr && MEM_valid;
 assign MEM_forward = {MEM_dest, MEM_forward_wait, final_result, MEM_op_csr};
-
+assign mem_wr_asid_tlbehi = MEM_valid && csr_we && (csr_num == `CSR_TLBEHI || csr_num == `CSR_ASID);
 
 endmodule

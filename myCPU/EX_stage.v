@@ -23,12 +23,29 @@ module EX_stage(
     output  wire [31:0]                   data_sram_wdata,
     input   wire                          data_sram_addr_ok,
 
+    //to from TLB
+    output  wire [18:0]                   s1_vppn,
+    output  wire                          s1_va_bit12,
+    input   wire                          data_tlb_found,
+    input   wire [   $clog2(`TLBNUM)-1:0] data_tlb_index,
+    input   wire [                  19:0] data_tlb_ppn,
+    input   wire [                   1:0] data_tlb_plv,
+    input   wire [                   1:0] data_tlb_mat,
+    input   wire                          data_tlb_d,
+    input   wire                          data_tlb_v,
+
+    input   wire                          mem_wr_asid_tlbehi,
+    input   wire                          wb_wr_asid_tlbehi,
+
     output  wire [`forwrd_data_width:0]   EX_forward
 );
 
 reg                          EX_valid;
 wire                         EX_ready_go;
 reg  [`to_EX_data_width-1:0] to_EX_data_r;
+
+wire        EX_stall;
+wire        tlbsrch_stall;
 
 wire [31:0] alu_src1   ;
 wire [31:0] alu_src2   ;
@@ -45,7 +62,7 @@ wire [4:0]  dest;
 wire        gr_we;
 wire        rdcntvh;
 wire        rdcntvl;
-wire        rdcntid;
+wire        tlbsrch_en;
 
 wire        ex_ex;
 wire        ex_INT;
@@ -74,6 +91,7 @@ wire       alu_wait;
 wire op_csr;
 wire EX_op_csr;
 wire [`CSR_NUM_WIDTH-1:0] csr_num;
+wire csr_we;
 wire [31:0] csr_wmask_tmp;
 wire [4:0] rj;
 
@@ -84,8 +102,9 @@ reg  EX_state;
 reg  data_req;
 wire data_sram_en;
 
+assign EX_stall = tlbsrch_stall || alu_wait;
 assign EX_ready_go = ~EX_valid || //EX_valid 无效
-                    (~alu_wait && //alu完成计算是大前提
+                    (~EX_stall && //alu完成计算、tlbsrch不阻塞是大前提
                     (~data_sram_en || (data_req && data_sram_addr_ok)));//如果无需操作内存，或者完成了地址握手才能发射
 assign EX_allow_in = ~EX_valid | (EX_ready_go & MEM_allow_in);
 assign EX_to_MEM_valid = EX_valid & EX_ready_go;
@@ -166,11 +185,12 @@ assign {pc,
         is_ertn,
         op_csr,
         csr_num,
+        csr_we,
         csr_wmask_tmp,
         rj,
         rdcntvh,
         rdcntvl,
-        rdcntid} = to_EX_data_r;
+        tlbsrch_en} = to_EX_data_r;
 
 assign to_MEM_data = {pc,
                       alu_result,
@@ -190,11 +210,18 @@ assign to_MEM_data = {pc,
                       is_ertn,
                       op_csr,
                       csr_num,
+                      csr_we,
                       csr_wmask_tmp,
                       rj,
                       rdcntvh,
                       rdcntvl,
-                      rdcntid
+                      tlbsrch_en,
+                      data_tlb_found,
+                      data_tlb_index,
+                      data_tlb_ppn,
+                      data_tlb_mat,
+                      data_tlb_d,
+                      data_tlb_v
                     };
 
 assign alu_src1 = src1_is_pc  ? pc[31:0] : rj_value;
@@ -234,5 +261,11 @@ alu u_alu(
     .alu_result (alu_result),
     .alu_wait   (alu_wait  )
 );
+
+//to TLB
+assign s1_vppn     = alu_result[31:13];
+assign s1_va_bit12 = alu_result[12];
+
+assign tlbsrch_stall = tlbsrch_en && (mem_wr_asid_tlbehi || wb_wr_asid_tlbehi);
 
 endmodule

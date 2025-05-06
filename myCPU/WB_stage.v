@@ -34,7 +34,13 @@ module WB_stage(
     input  wire  [31:0]                   csr_rvalue,
     output                                csr_we,
     output wire  [31:0]                   csr_wmask,
-    output wire  [31:0]                   csr_wvalue
+    output wire  [31:0]                   csr_wvalue,
+    //TLB ins
+    output wire                           tlbsrch_en,
+    output wire                           data_tlb_found,
+    output wire  [   $clog2(`TLBNUM)-1:0] data_tlb_index,
+
+    output wire                           wb_wr_asid_tlbehi
 );
 
 reg WB_valid;
@@ -45,7 +51,6 @@ wire [31:0] pc;
 wire [ 4:0] dest;
 wire [31:0] final_result;
 wire        gr_we;
-wire        rdcntid;
 wire        ex_INT;
 wire        ex_SYS;
 wire        ex_BRK;
@@ -55,6 +60,7 @@ wire        ex_INE;
 wire        is_etrn;
 wire        op_csr;
 wire        WB_op_csr;
+wire        wb_csr_we;
 wire [31:0] csr_wmask_tmp;
 wire [ 4:0] rj;
 wire [ 4:0] WB_dest;
@@ -85,18 +91,22 @@ assign {pc,
         is_etrn,
         op_csr,
         csr_num,
+        wb_csr_we,
         csr_wmask_tmp,
         rj,
-        rdcntid} = to_WB_data_r;
+        tlbsrch_en,
+        data_tlb_found,
+        data_tlb_index} = to_WB_data_r;
 
 assign rf_we    = gr_we && WB_valid && !wb_ex;
 assign rf_waddr = dest;
 assign rf_wdata = csr_re ? csr_rvalue : final_result;
 
 assign csr_re = WB_valid && op_csr;
-assign csr_we = WB_valid && op_csr && ~rdcntid && (rj != 5'b00000);
+assign csr_we = WB_valid && wb_csr_we;
 assign csr_wmask =  (rj == 5'b00001) ? 32'hffffffff : csr_wmask_tmp; 
 assign csr_wvalue = final_result;
+assign wb_wr_asid_tlbehi = WB_valid && wb_csr_we && (csr_num == `CSR_TLBEHI || csr_num == `CSR_ASID);
 
 assign wb_ex = WB_valid && (ex_INT || ex_SYS || ex_BRK || 
                             ex_ADEF || ex_ALE || ex_INE || is_etrn);
