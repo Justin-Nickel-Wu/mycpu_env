@@ -56,7 +56,7 @@ wire write_buffer_is_IDLE;
 wire write_buffer_is_WRITE;
 
 wire         cache_hit;
-wire         way_hit [1:0];
+wire [  1:0] way_hit;
 wire [127:0] way_data[1:0];
 wire [ 31:0] way_load_word[1:0];
 wire [ 31:0] load_res;
@@ -83,13 +83,20 @@ reg  [ 1:0] miss_buffer_ret_num;
 wire [ 1:0] ret_num_add_one;
 wire [31:0] write_in;
 wire [31:0] refill_data;
-wire [ 1:0] way_bank_wr_en;
 
-wire [ 7:0] way_bank_addra [1:0][3:0];
-wire [31:0] way_bank_dina  [1:0][3:0];
-wire [31:0] way_bank_douta [1:0][3:0];
-wire        way_bank_ena   [1:0][3:0];
-wire [ 3:0] way_bank_wea   [1:0][3:0];
+reg  [ 7:0] write_buffer_index;
+reg  [ 3:0] write_buffer_wstrb;
+reg  [31:0] write_buffer_wdata;
+reg  [ 3:0] write_buffer_offset;
+reg  [ 1:0] write_buffer_way;
+
+wire [ 1:0] way_bank_wr_en;
+wire [ 7:0] way_bank_addra    [1:0][3:0];
+wire [31:0] way_bank_dina     [1:0][3:0];
+wire [31:0] way_bank_douta    [1:0][3:0];
+wire        way_bank_ena      [1:0][3:0];
+wire [ 3:0] way_bank_wea      [1:0][3:0];
+wire        way_bank_wr_match [1:0][3:0];
 
 wire [ 7:0] way_tagv_addra [1:0];
 wire [20:0] way_tagv_dina  [1:0];//20:1 tag 0 v
@@ -102,7 +109,6 @@ reg  [ 1:0] way_d_reg [255:0];
 genvar  i,j;
 
 always @(posedge clk) begin
-
     if (reset) begin
         main_state <= main_IDLE;
     end
@@ -170,6 +176,39 @@ always @(posedge clk) begin
     endcase
 end
 
+always @(posedge clk) begin
+    if (reset) begin
+        write_buffer_state <= write_buffer_IDLE;
+    end
+    else case (write_buffer_state)
+        write_buffer_IDLE: begin
+            if (main_is_LOOKUP && cache_hit && req_buffer_op) begin
+                write_buffer_state <= write_buffer_WRITE;
+
+                write_buffer_index  <= req_buffer_index;
+                write_buffer_wstrb  <= req_buffer_wstrb;
+                write_buffer_wdata  <= req_buffer_wdata;
+                write_buffer_offset <= req_buffer_offset;
+                write_buffer_way    <= way_hit;
+            end
+        end
+
+        write_buffer_WRITE: begin
+            if (main_is_LOOKUP && cache_hit && req_buffer_op) begin
+                write_buffer_state <= write_buffer_WRITE;
+
+                write_buffer_index  <= req_buffer_index;
+                write_buffer_wstrb  <= req_buffer_wstrb;
+                write_buffer_wdata  <= req_buffer_wdata;
+                write_buffer_offset <= req_buffer_offset;
+                write_buffer_way    <= way_hit;
+            end else begin
+                write_buffer_state <= write_buffer_IDLE;
+            end
+        end
+    endcase
+end
+
 assign main_is_IDLE    = main_state[0];
 assign main_is_LOOKUP  = main_state[1];
 assign main_is_MISS    = main_state[2];
@@ -195,7 +234,7 @@ generate for (i=0; i<2; i=i+1) begin: gen_way_hit
     assign way_hit[i] = way_tagv_douta[i][0] && (tag == way_tagv_douta[i][20:1]);
         //v位为1，且tag匹配
 end endgenerate
-assign cache_hit = !way_hit;
+assign cache_hit = |way_hit;
 
 //生成返回数据信号
 generate for (i=0; i<2; i=i+1) begin: gen_way_data
@@ -214,8 +253,9 @@ one_valid_n #(2) gen_invalid_way(
     .out    (invalid_way),
     .nozero (has_invalid)
 );
-assign way_d = way_d_reg[req_buffer_index];
-    //TODO:还需要考虑与write buffer冲突的情况
+assign way_d = way_d_reg[req_buffer_index] | 
+             {2{(write_buffer_is_WRITE && write_buffer_index == req_buffer_index)}} & write_buffer_way;
+    //way_d可能会会被当前写状态机的写事件标记脏
 assign replace_way = has_invalid ? invalid_way : rand_replace_way;
     //如果有无效行，使用无效行，否则使用随机行
 assign replace_d = |(replace_way & way_d);
@@ -247,7 +287,7 @@ assign data_ok = (main_is_LOOKUP && cache_hit) || //包括了read hit 与 write 
 assign ret_num_add_one[0] = ~miss_buffer_ret_num[0];
 assign ret_num_add_one[1] = miss_buffer_ret_num[0] ^ miss_buffer_ret_num[1];
 
-assign write_in = {(req_buffer_wstrb[3] ? req_buffer_wdata[31:24 ]: ret_data[31:24]),
+assign write_in = {(req_buffer_wstrb[3] ? req_buffer_wdata[31:24] : ret_data[31:24]),
                    (req_buffer_wstrb[2] ? req_buffer_wdata[23:16] : ret_data[23:16]),
                    (req_buffer_wstrb[1] ? req_buffer_wdata[15: 8] : ret_data[15: 8]),
                    (req_buffer_wstrb[0] ? req_buffer_wdata[ 7: 0] : ret_data[ 7: 0])};
@@ -257,10 +297,10 @@ assign refill_data = (req_buffer_op && (req_buffer_offset[3:2] == miss_buffer_re
 assign way_bank_wr_en = miss_buffer_replace_way & {2{ret_valid}};
     //控制选中way的写使能
 
-/*===============BANK读写逻辑信号===============*/
+//BANK读写逻辑信号
 generate for (i=0; i<2; i=i+1) begin: gen_data_way
     for (j=0; j<4; j=j+1) begin: gen_data_bank
-        assign way_bank_wr_match[i][j] = write_buffer_is_write && (write_buffer_way[i] && write_buffer_offset[3:2] == j[1:0]);
+        assign way_bank_wr_match[i][j] = write_buffer_is_WRITE && (write_buffer_way[i] && write_buffer_offset[3:2] == j[1:0]);
             //写状态机处于写状态，并且匹配上了对应word
         assign way_bank_addra[i][j] = way_bank_wr_match[i][j] ? write_buffer_index : ({8{ addr_ok}} & index              |
                                                                                       {8{!addr_ok}} & req_buffer_index);
@@ -268,7 +308,7 @@ generate for (i=0; i<2; i=i+1) begin: gen_data_way
             //其余时刻为lookup服务
         assign way_bank_wea[i][j] = {4{way_bank_wr_match[i][j]}} & write_buffer_wstrb | //store写入word
                                     {4{main_is_REFILL && (way_bank_wr_en[i] && miss_buffer_ret_num == j[1:0])}};//refill写入行
-        assign way_bank_dina[i][j] = {32{write_buffer_is_WRITE}} & write_buffer_data |
+        assign way_bank_dina[i][j] = {32{write_buffer_is_WRITE}} & write_buffer_wdata |
                                      {32{main_is_REFILL}}        & refill_data;
             //当write hit与refill存在潜在竞争，但实际不会发生：
             //write_buffer在lookup启动，两拍一定能完成写入
@@ -279,7 +319,29 @@ generate for (i=0; i<2; i=i+1) begin: gen_data_way
     end
 end endgenerate
 
-/*===============生成BANK===============*/
+//TAGV读写逻辑信号
+generate for (i=0; i<2; i=i+1) begin: gen_tagv_way
+    assign way_tagv_ena = 1'b1;//始终开启
+    assign way_tagv_addra[i] = {8{ addr_ok}} & index |
+                               {8{!addr_ok}} & req_buffer_index;
+                               //addr_ok在收到cache同拍置1，此时index还未置入buffer，此后addr_ok置低，使用buffer即可
+    assign way_tagv_wea[i] = miss_buffer_replace_way[i] && main_is_REFILL && ((ret_valid && ret_last));
+        //当所有数据返回后写tagv
+    assign way_tagv_dina[i] = {req_buffer_tag, 1'b1};
+end endgenerate
+
+//way_d_reg维护
+always @(posedge clk) begin
+    if (main_is_REFILL && ret_valid && ret_last) begin
+        way_d_reg[req_buffer_index][0] <= miss_buffer_replace_way[0] ? req_buffer_op : way_d_reg[req_buffer_index][0];
+        way_d_reg[req_buffer_index][1] <= miss_buffer_replace_way[1] ? req_buffer_op : way_d_reg[req_buffer_index][1];
+    end 
+    else if (write_buffer_is_WRITE) begin
+        way_d_reg[write_buffer_index] <= way_d_reg[write_buffer_index] | write_buffer_way;
+    end
+end
+
+//生成BANK
 generate for (i=0; i<2; i=i+1) begin: data_ram_way
     for (j=0; j<4; j=j+1) begin: data_ram_bank
         data_bank_sram u(
@@ -293,19 +355,7 @@ generate for (i=0; i<2; i=i+1) begin: data_ram_way
     end
 end endgenerate
 
-/*===============TAGV读写逻辑信号===============*/
- generate for (i=0; i<2; i=i+1) begin: gen_tagv_way
-    assign way_tagv_ena = 1'b1;//始终开启
-    assign way_tagv_addra[i] = {8{ addr_ok}} & index |
-                               {8{!addr_ok}} & req_buffer_index;
-                               //addr_ok在收到cache同拍置1，此时index还未置入buffer，此后addr_ok置低，使用buffer即可
-    assign way_tagv_wea[i] = 1'b0;
-        //TODO
-    assign way_tagv_dina[i] = {req_buffer_tag, 1'b1};
-end endgenerate
-
-
-/*===============生成TAGV===============*/
+//生成TAGV
 generate for (i=0; i<2; i=i+1) begin: tagv_ram_way
     tagv_sram u(
         .clka  (clk),
