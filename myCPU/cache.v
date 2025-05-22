@@ -1,6 +1,6 @@
 module cache(
     input  wire        clk,
-    input  wire        reset,
+    input  wire        resetn,
 
     //from to CPU
     input  wire        valid,
@@ -15,7 +15,7 @@ module cache(
     output wire [31:0] rdata,
 
     //AXIS转接桥读请求握手
-    output reg         rd_req,
+    output wire        rd_req,
     output wire [ 2:0] rd_type, //000:读1字节 001:读2字节 010:读4字节 100:读Cache行
     output wire [31:0] rd_addr,
     input  wire        rd_rdy,
@@ -24,13 +24,15 @@ module cache(
     input  wire        ret_last, //是否是读请求最后一个数据
     input  wire [31:0] ret_data,
     //AXIS转接桥写请求握手
-    output wire        wr_req,
+    output reg         wr_req,
     output wire [ 2:0] wr_type, //000:写1字节 001:写2字节 010:写4字节 100:写Cache行
     output wire [31:0] wr_addr,
-    output wire [ 3:0] wr_strb, //写使能 写Cache行模式下无意义
+    output wire [ 3:0] wr_wstrb, //写使能 写Cache行模式下无意义
     output wire[127:0] wr_data,
     input  wire        wr_rdy
 );
+
+wire reset;
 
 localparam main_IDLE    = 5'b00001,
            main_LOOKUP  = 5'b00010,
@@ -108,9 +110,17 @@ reg  [ 1:0] way_d_reg [255:0];
 
 genvar  i,j;
 
+assign reset = ~resetn;
+
 always @(posedge clk) begin
     if (reset) begin
         main_state <= main_IDLE;
+
+        req_buffer_op     <= 1'b0;
+        req_buffer_index  <= 8'b0;
+        req_buffer_offset <= 4'b0;
+        req_buffer_wstrb  <= 4'b0;
+        req_buffer_wdata  <= 31'b0;
     end
     else case (main_state)
         main_IDLE: begin
@@ -122,6 +132,7 @@ always @(posedge clk) begin
                 req_buffer_offset <= offset;
                 req_buffer_wstrb  <= wstrb;
                 req_buffer_wdata  <= wdata;
+                req_buffer_tag    <= tag;
             end
         end 
 
@@ -134,6 +145,7 @@ always @(posedge clk) begin
                 req_buffer_offset <= offset;
                 req_buffer_wstrb  <= wstrb;
                 req_buffer_wdata  <= wdata;
+                req_buffer_tag    <= tag;
             end
             else if (!cache_hit) begin
                 if (replace_d && replace_v) begin
@@ -141,7 +153,6 @@ always @(posedge clk) begin
                 end else begin
                     main_state <= main_REPLACE;
                 end
-                req_buffer_tag <= tag;
                 miss_buffer_replace_way <= replace_way;
             end
             else begin
@@ -178,7 +189,13 @@ end
 
 always @(posedge clk) begin
     if (reset) begin
-        write_buffer_state <= write_buffer_IDLE;
+        write_buffer_state  <= write_buffer_IDLE;
+
+        write_buffer_index  <= 8'b0;
+        write_buffer_wstrb  <= 4'b0;
+        write_buffer_wdata  <= 32'b0;
+        write_buffer_offset <= 4'b0;
+        write_buffer_way    <= 2'b0;
     end
     else case (write_buffer_state)
         write_buffer_IDLE: begin
@@ -231,7 +248,7 @@ assign addr_ok = (main_is_IDLE && main_IDLE2LOOKUP) || (main_is_LOOKUP && main_L
 
 //生成cache hit逻辑信号
 generate for (i=0; i<2; i=i+1) begin: gen_way_hit
-    assign way_hit[i] = way_tagv_douta[i][0] && (tag == way_tagv_douta[i][20:1]);
+    assign way_hit[i] = way_tagv_douta[i][0] && (req_buffer_tag == way_tagv_douta[i][20:1]);
         //v位为1，且tag匹配
 end endgenerate
 assign cache_hit = |way_hit;
@@ -269,20 +286,22 @@ assign replace_data = {128{miss_buffer_replace_way[0]}} & way_data[0] |
                       {128{miss_buffer_replace_way[1]}} & way_data[1];
 assign wr_type = 3'b100; //写cache行
 assign wr_addr = {replace_tag, req_buffer_index, 4'b0000};
-assign wr_strb = 4'b1111;
+assign wr_wstrb = 4'b1111;
 assign wr_data = replace_data;
 
 /*================================REPLACE================================*/
 assign rd_req  = main_is_REPLACE;
 assign rd_type = 3'b100; //读cache行
-assign rd_addr = {replace_tag, req_buffer_index, 4'b0000};
+assign rd_addr = {req_buffer_tag, req_buffer_index, 4'b0000};
 
 /*================================REFILL================================*/
 assign rdata = {32{main_is_LOOKUP}} & load_res |
                {32{main_is_REFILL}} & ret_data;
 
-assign data_ok = (main_is_LOOKUP && cache_hit) || //包括了read hit 与 write hit
+assign data_ok = (main_is_LOOKUP && (cache_hit || req_buffer_op)) || //包括了read hit 与 write hit
                  (main_is_REFILL && !req_buffer_op && ret_valid && miss_buffer_ret_num == req_buffer_offset[3:2]);
+    //对于写操作，总是在LOOKUP立刻返回data_ok，非写操作如果cache miss将在refill阶段收到所请求的字时返回data_ok
+    //这样子可以避免阻塞CPU内核
 //返回数据的组计数
 assign ret_num_add_one[0] = ~miss_buffer_ret_num[0];
 assign ret_num_add_one[1] = miss_buffer_ret_num[0] ^ miss_buffer_ret_num[1];
@@ -321,7 +340,7 @@ end endgenerate
 
 //TAGV读写逻辑信号
 generate for (i=0; i<2; i=i+1) begin: gen_tagv_way
-    assign way_tagv_ena = 1'b1;//始终开启
+    assign way_tagv_ena[i] = 1'b1;//始终开启
     assign way_tagv_addra[i] = {8{ addr_ok}} & index |
                                {8{!addr_ok}} & req_buffer_index;
                                //addr_ok在收到cache同拍置1，此时index还未置入buffer，此后addr_ok置低，使用buffer即可
@@ -346,6 +365,7 @@ generate for (i=0; i<2; i=i+1) begin: data_ram_way
     for (j=0; j<4; j=j+1) begin: data_ram_bank
         data_bank_sram u(
             .clka  (clk),
+            .reset (reset),
             .ena   (way_bank_ena[i][j]),
             .wea   (way_bank_wea[i][j]),
             .addra (way_bank_addra[i][j]),
@@ -359,6 +379,7 @@ end endgenerate
 generate for (i=0; i<2; i=i+1) begin: tagv_ram_way
     tagv_sram u(
         .clka  (clk),
+        .reset (reset),
         .ena   (way_tagv_ena[i]),
         .wea   (way_tagv_wea[i]),
         .addra (way_tagv_addra[i]),
@@ -376,6 +397,7 @@ module data_bank_sram
     parameter DEPTH = 256
 )
 (
+    input                  reset   ,
     input  [ 7:0]          addra   ,
     input                  clka    ,
     input  [31:0]          dina    ,
@@ -388,7 +410,13 @@ reg [31:0] mem_reg [255:0];
 reg [31:0] output_buffer;
 
 always @(posedge clka) begin
-    if (ena) begin
+    if (reset) begin: bank_reset
+        integer i;
+        for (i=0; i<256; i=i+1)
+            mem_reg[i] <= 32'b0;
+        output_buffer <= 32'b0;
+    end
+    else if (ena) begin
         if (|wea) begin
             if (wea[0]) begin
                 mem_reg[addra][ 7: 0] <= dina[ 7: 0]; 
@@ -422,6 +450,7 @@ module tagv_sram
     parameter DEPTH = 256
 )
 ( 
+    input                  reset   ,
     input  [ 7:0]          addra   ,
     input                  clka    ,
     input  [20:0]          dina    ,
@@ -434,7 +463,13 @@ reg [20:0] mem_reg [255:0];
 reg [20:0] output_buffer;
 
 always @(posedge clka) begin
-    if (ena) begin
+    if (reset) begin: tagv_reset
+        integer i;
+        for (i=0; i<256; i=i+1)
+            mem_reg[i] <= 21'b0;
+        output_buffer <= 21'b0;
+    end
+    else if (ena) begin
         if (wea) begin
             mem_reg[addra] <= dina;
         end
@@ -469,7 +504,8 @@ always @(posedge clk) begin
         lsfr_val[6] <= lsfr_val[5];
         lsfr_val[7] <= lsfr_val[6]; 
     end
-
-    assign random_val = lsfr_val[6:5];
 end
+
+assign random_val = lsfr_val[6:5];
+
 endmodule

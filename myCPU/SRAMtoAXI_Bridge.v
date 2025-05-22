@@ -74,7 +74,6 @@ module SRAMtoAXI_Bridge(
 reg  do_req;
 reg  do_req_id;//请求ID号，data:1 inst:0
 reg  do_wr;
-reg  [ 1:0] do_size;
 reg  [ 3:0] do_wstrb;
 reg  [31:0] do_addr;
 reg  [31:0] do_wdata;
@@ -92,8 +91,7 @@ always @(posedge clk) begin
     
     do_wr     <= data_req && data_addr_ok ? data_wr :
                  inst_req && inst_addr_ok ? inst_wr : do_wr;
-    do_size   <= data_req && data_addr_ok ? data_size :
-                 inst_req && inst_addr_ok ? inst_size : do_size;
+
     do_wstrb  <= data_req && data_addr_ok ? data_wstrb :
                  inst_req && inst_addr_ok ? inst_wstrb : do_wstrb;
     do_addr   <= data_req && data_addr_ok ? data_addr :
@@ -125,9 +123,9 @@ end
 
 //读请求 ar
 assign arid    = {3'b0, do_req_id};
-assign araddr  = do_addr;
+assign araddr  = {do_addr[31:2], 2'b00};
 assign arlen   = 8'b0;
-assign arsize  = {1'b0, do_size};
+assign arsize  = 3'b010;
 assign arburst = 2'b01;
 assign arlock  = 2'b0;
 assign arcache = 4'b0;
@@ -139,9 +137,9 @@ assign rready  = 1'b1; //时刻准备接收数据。
 
 //写请求 aw
 assign awid    = {3'b0, do_req_id};
-assign awaddr  = do_addr;
+assign awaddr  = {do_addr[31:2], 2'b00};
 assign awlen   = 8'b0;
-assign awsize  = {1'b0, do_size};
+assign awsize  = 3'b010;
 assign awburst = 2'b01;
 assign awlock  = 2'b0;
 assign awcache = 4'b0;
