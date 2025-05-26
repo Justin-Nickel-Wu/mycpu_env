@@ -81,6 +81,40 @@ wire        data_sram_addr_ok;
 wire        data_sram_data_ok;
 wire [31:0] data_sram_rdata;
 
+//ICache interface
+wire         inst_rd_req;
+wire [ 2:0]  inst_rd_type; //只有3'b100有效 16Bits
+wire [31:0]  inst_rd_addr;
+wire         inst_rd_rdy;
+
+wire         inst_ret_valid;
+wire         inst_ret_last;
+wire [31:0]  inst_ret_data;
+
+wire         inst_wr_req;
+wire [  2:0] inst_wr_type;
+wire [ 31:0] inst_wr_addr;
+wire [  3:0] inst_wr_wstrb;
+wire [127:0] inst_wr_data;
+wire         inst_wr_rdy;
+
+//Dcache interface
+wire         data_rd_req;
+wire [ 2:0]  data_rd_type; //只有3'b100有效 16Bits
+wire [31:0]  data_rd_addr;
+wire         data_rd_rdy;
+
+wire         data_ret_valid;
+wire         data_ret_last;
+wire [31:0]  data_ret_data;
+
+wire         data_wr_req;
+wire [  2:0] data_wr_type;
+wire [ 31:0] data_wr_addr;
+wire [  3:0] data_wr_wstrb;
+wire [127:0] data_wr_data;
+wire         data_wr_rdy;
+
 wire ID_allow_in;
 wire EX_allow_in;
 wire MEM_allow_in;
@@ -308,27 +342,39 @@ SRAMtoAXI_Bridge u_SRAMtoAXI_Bridge(
     .clk                (aclk),
     .reset              (reset),
 
-    //Inst SRAM 接口
-    .inst_req           (inst_sram_req),
-    .inst_wr            (inst_sram_wr),
-    .inst_size          (inst_sram_size),
-    .inst_wstrb         (inst_sram_wstrb),
-    .inst_addr          (inst_sram_addr),
-    .inst_wdata         (inst_sram_wdata),
-    .inst_addr_ok       (inst_sram_addr_ok),
-    .inst_data_ok       (inst_sram_data_ok),
-    .inst_rdata         (inst_sram_rdata),
+    // ICache接口
+    .inst_rd_req    (inst_rd_req    ),    // 读请求
+    .inst_rd_type   (inst_rd_type   ),    // 读类型
+    .inst_rd_addr   (inst_rd_addr   ),    // 读地址
+    .inst_rd_rdy    (inst_rd_rdy    ),    // 读就绪
 
-    //Data SRAM 接口
-    .data_req           (data_sram_req),
-    .data_wr            (data_sram_wr),
-    .data_size          (data_sram_size),
-    .data_wstrb         (data_sram_wstrb),
-    .data_addr          (data_sram_addr),
-    .data_wdata         (data_sram_wdata),
-    .data_addr_ok       (data_sram_addr_ok),
-    .data_data_ok       (data_sram_data_ok),
-    .data_rdata         (data_sram_rdata),
+    .inst_ret_valid (inst_ret_valid ),    // 返回数据有效
+    .inst_ret_last  (inst_ret_last  ),    // 返回最后一个数据
+    .inst_ret_data  (inst_ret_data  ),    // 返回数据
+
+    .inst_wr_req    (inst_wr_req    ),    // 写请求
+    .inst_wr_type   (inst_wr_type   ),    // 写类型
+    .inst_wr_addr   (inst_wr_addr   ),    // 写地址
+    .inst_wr_wstrb  (inst_wr_wstrb  ),    // 写使能
+    .inst_wr_data   (inst_wr_data   ),    // 写数据
+    .inst_wr_rdy    (inst_wr_rdy    ),    // 写就绪
+
+    // DCache接口
+    .data_rd_req    (data_rd_req    ),    // 读请求
+    .data_rd_type   (data_rd_type   ),    // 读类型
+    .data_rd_addr   (data_rd_addr   ),    // 读地址
+    .data_rd_rdy    (data_rd_rdy    ),    // 读就绪
+
+    .data_ret_valid (data_ret_valid ),    // 返回数据有效
+    .data_ret_last  (data_ret_last  ),    // 返回最后一个数据
+    .data_ret_data  (data_ret_data  ),    // 返回数据
+
+    .data_wr_req    (data_wr_req    ),    // 写请求
+    .data_wr_type   (data_wr_type   ),    // 写类型
+    .data_wr_addr   (data_wr_addr   ),    // 写地址
+    .data_wr_wstrb  (data_wr_wstrb  ),    // 写使能
+    .data_wr_data   (data_wr_data   ),    // 写数据
+    .data_wr_rdy    (data_wr_rdy    ),    // 写就绪
 
     //读请求通道
     .arid               (arid      ),
@@ -387,5 +433,79 @@ regfile u_regfile(
     .waddr  (rf_waddr ),
     .wdata  (rf_wdata )
     );
+
+cache ICache (
+    // 时钟与复位
+    .clk        (aclk                 ),    // 时钟信号
+    .resetn     (aresetn              ),    // 低有效复位
+
+    // CPU接口
+    .valid      (inst_sram_req        ),    // 请求有效
+    .op         (inst_sram_wr         ),    // 读写操作
+    .index      (inst_sram_addr[11: 4]),    // addr[11:4]
+    .tag        (inst_sram_addr[31:12]),    // addr[31:12]
+    .offset     (inst_sram_addr[ 3: 0]),    // addr[3:0]
+    .wstrb      (inst_sram_wstrb      ),    // 写使能
+    .wdata      (inst_sram_wdata      ),    // 写数据
+    .addr_ok    (inst_sram_addr_ok    ),    // 地址握手
+    .data_ok    (inst_sram_data_ok    ),    // 数据握手
+    .rdata      (inst_sram_rdata      ),    // 读数据
+
+    // AXIS转接桥读请求握手
+    .rd_req     (inst_rd_req          ),    // 读请求
+    .rd_type    (inst_rd_type         ),    // 读类型
+    .rd_addr    (inst_rd_addr         ),    // 读地址
+    .rd_rdy     (inst_rd_rdy          ),    // 读就绪
+
+    // AXIS转接桥读数据握手
+    .ret_valid  (inst_ret_valid       ),    // 返回数据有效
+    .ret_last   (inst_ret_last        ),    // 返回最后一个数据
+    .ret_data   (inst_ret_data        ),    // 返回数据
+
+    // AXIS转接桥写请求握手
+    .wr_req     (inst_wr_req          ),    // 写请求
+    .wr_type    (inst_wr_type         ),    // 写类型
+    .wr_addr    (inst_wr_addr         ),    // 写地址
+    .wr_wstrb   (inst_wr_wstrb        ),    // 写使能
+    .wr_data    (inst_wr_data         ),    // 写数据
+    .wr_rdy     (inst_wr_rdy          )     // 写就绪
+);
+
+cache DCache (
+    // 时钟与复位
+    .clk        (aclk                 ),    // 时钟信号
+    .resetn     (aresetn              ),    // 低有效复位
+
+    // CPU接口
+    .valid      (data_sram_req        ),    // 请求有效
+    .op         (data_sram_wr         ),    // 读写操作
+    .index      (data_sram_addr[11: 4]),    // addr[11:4]
+    .tag        (data_sram_addr[31:12]),    // addr[31:12]
+    .offset     (data_sram_addr[ 3: 0]),    // addr[3:0]
+    .wstrb      (data_sram_wstrb      ),    // 写使能
+    .wdata      (data_sram_wdata      ),    // 写数据
+    .addr_ok    (data_sram_addr_ok    ),    // 地址握手
+    .data_ok    (data_sram_data_ok    ),    // 数据握手
+    .rdata      (data_sram_rdata      ),    // 读数据
+
+    // AXIS转接桥读请求握手
+    .rd_req     (data_rd_req          ),    // 读请求
+    .rd_type    (data_rd_type         ),    // 读类型
+    .rd_addr    (data_rd_addr         ),    // 读地址
+    .rd_rdy     (data_rd_rdy          ),    // 读就绪
+
+    // AXIS转接桥读数据握手
+    .ret_valid  (data_ret_valid       ),    // 返回数据有效
+    .ret_last   (data_ret_last        ),    // 返回最后一个数据
+    .ret_data   (data_ret_data        ),    // 返回数据
+
+    // AXIS转接桥写请求握手
+    .wr_req     (data_wr_req          ),    // 写请求
+    .wr_type    (data_wr_type         ),    // 写类型
+    .wr_addr    (data_wr_addr         ),    // 写地址
+    .wr_wstrb   (data_wr_wstrb        ),    // 写使能
+    .wr_data    (data_wr_data         ),    // 写数据
+    .wr_rdy     (data_wr_rdy          )     // 写就绪
+);
 
 endmodule

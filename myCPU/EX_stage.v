@@ -140,7 +140,7 @@ assign data_sram_wstrb = write_mem_1_byte ? (mem_addr_low2 == 2'b00 ? 4'b0001 :
 assign data_sram_wdata = write_mem_1_byte ? {4{rkd_value[ 7: 0]}} :
                          write_mem_2_byte ? {2{rkd_value[15: 0]}} :
                     /* write_mem_4_byte */  rkd_value;
-assign data_sram_addr = alu_result;
+assign data_sram_addr = {alu_result[31:2], 2'b00};
 
 assign {pc,
         rj_value,
