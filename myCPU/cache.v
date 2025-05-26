@@ -166,7 +166,7 @@ always @(posedge clk) begin
                 wr_req <= 1'b1;
             end
         end
-
+            //MISS阶段发出wr_req请求的只有Dcache，是一定会被接受的
         main_REPLACE: begin
             if (rd_rdy) begin
                 main_state <= main_REFILL;
@@ -174,7 +174,7 @@ always @(posedge clk) begin
             end
             wr_req <= 1'b0;
         end
-
+            //REPLACE发出的rd_req不一定会被马上处理（ICache与Dcache同时发出请求），收到rd_rdy后进入下一阶段。
         main_REFILL: begin
             if (ret_valid && ret_last) begin //如果没有置高，则跳过refill阶段。对应store且cache hit
                 main_state <= main_IDLE;
