@@ -52,9 +52,9 @@ endmodule
 module one_valid_n #(
 	parameter n = 16
 )(
-	input  [n-1:0] in,
-	output [n-1:0] out,
-	output         nozero
+	input  wire [n-1:0] in,
+	output wire [n-1:0] out,
+	output wire         nozero
 );
 
 wire [n-1:0] one_in;

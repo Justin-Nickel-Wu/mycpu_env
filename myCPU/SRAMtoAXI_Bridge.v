@@ -105,13 +105,13 @@ reg wdata_rcv;//是否完成写数据握手
 assign inst_req = inst_rd_req || inst_wr_req;
 assign data_req = data_rd_req || data_wr_req;
 
-assign inst_addr = {31{inst_rd_req}} & inst_rd_addr |
-                   {31{inst_wr_req}} & inst_wr_addr;
-assign data_addr = {31{data_rd_req}} & data_rd_addr |
-                   {31{data_wr_req}} & data_wr_addr;
+assign inst_addr = {32{inst_rd_req}} & inst_rd_addr |
+                   {32{inst_wr_req}} & inst_wr_addr;
+assign data_addr = {32{data_rd_req}} & data_rd_addr |
+                   {32{data_wr_req}} & data_wr_addr;
     //同一cache的rd_req与wr_req不会同时为1
-assign inst_rd_rdy = !do_req && !data_req;
-assign data_rd_rdy = !do_req;
+assign inst_rd_rdy = !do_req && !data_req && !inst_wr_req;
+assign data_rd_rdy = !do_req && !data_wr_req;
 
 assign inst_wr_rdy = 1'b0; //ICache没有写操作
 assign data_wr_rdy = !do_req; //空闲时置起
@@ -171,9 +171,9 @@ always @(posedge clk) begin
                  arvalid && arready ? 1'b1 :
                  awvalid && awready ? 1'b1 :
                  data_back          ? 1'b0 : addr_rcv;
-    wdata_rcv <= reset              ? 1'b0 :
-                 wvalid && wready   ? 1'b1 : 
-                 data_back          ? 1'b0 : wdata_rcv;
+    wdata_rcv <= reset                      ? 1'b0 :
+                 wvalid && wready && wlast  ? 1'b1 :  //最后一个发送完毕
+                 data_back                  ? 1'b0 : wdata_rcv;
 end
 
 //读请求 ar
