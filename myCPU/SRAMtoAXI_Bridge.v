@@ -114,7 +114,7 @@ assign inst_rd_rdy = !do_req && !data_req && !inst_wr_req;
 assign data_rd_rdy = !do_req && !data_wr_req;
 
 assign inst_wr_rdy = 1'b0; //ICache没有写操作
-assign data_wr_rdy = !do_req; //空闲时置起
+assign data_wr_rdy = !do_req && !(inst_req && inst_is_rdy); //空闲且当拍没有收到请求时
 
 assign inst_is_rdy = inst_rd_rdy || inst_wr_rdy;
 assign data_is_rdy = data_rd_rdy || data_wr_rdy;
