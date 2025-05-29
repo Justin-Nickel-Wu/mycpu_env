@@ -121,6 +121,8 @@ always @(posedge clk) begin
         req_buffer_offset <= 4'b0;
         req_buffer_wstrb  <= 4'b0;
         req_buffer_wdata  <= 32'b0;
+
+        wr_req <= 1'b0;
     end
     else case (main_state)
         main_IDLE: begin

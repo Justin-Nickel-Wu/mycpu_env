@@ -217,13 +217,13 @@ assign is_load = EX_valid & (read_mem_1_byte | read_mem_2_byte | read_mem_4_byte
 assign EX_op_csr = op_csr && EX_valid;
 assign EX_forward = {EX_dest, alu_result, is_load, EX_op_csr};
 
-/*
+
 //输出写内存信息
 always @(posedge clk) begin
-    if (data_sram_we == 4'b1111)
+    if (data_sram_wr)
         $display("WRITE MEM, pc: %8h, addr: %8h, data: %8h",pc, alu_result, rkd_value);
 end
-*/
+
 
 alu u_alu(
     .clk        (clk       ),
